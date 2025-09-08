@@ -2,5 +2,5 @@ dist/
 build/
 .env
 node_modules
-
+/prisma/migrations
 /generated/prisma
