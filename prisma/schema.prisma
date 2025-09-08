@@ -14,8 +14,27 @@ datasource db {
 }
 
 model user {
-  id       Int    @id @default(autoincrement())
-  username String @unique
-  password String
-  email    String @unique
+  id         Int          @id @default(autoincrement())
+  username   String       @unique
+  password   String
+  email      String       @unique
+  healthData HealthData[]
+}
+
+model HealthData {
+  id        Int        @id @default(autoincrement())
+  user      user       @relation(fields: [userId], references: [id])
+  userId    Int
+  type      HealthType
+  value     Float?
+  createdAt DateTime?
+
+  @@unique([userId, type]) // will be able to search by userid and type
+}
+
+enum HealthType {
+  hrvBaseline
+  rhrBaseline
+  sleepBaseline
+  stepsBaseline
 }
