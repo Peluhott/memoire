@@ -53,9 +53,36 @@ export async function getContentSignedUrl(req: Request, res: Response, next: Nex
     const id = Number(req.params.id ?? req.body.id);
     if (!id || Number.isNaN(id)) return res.status(400).json({ error: 'invalid_content_id' });
 
-    const url = await service.getSignedUrlForContent(id);
-    if (!url) return res.status(404).json({ error: 'not_found' });
-    return res.json({ url });
+  const url = await service.getSignedUrlForContent(id);
+  if (!url) return res.status(404).json({ error: 'not_found' });
+  return res.status(200).json({ url });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function toggleShare(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = Number(req.params.id ?? req.body.id);
+    if (!id || Number.isNaN(id)) return res.status(400).json({ error: 'invalid_content_id' });
+
+  const updated = await service.toggleShare(id);
+  if (!updated) return res.status(404).json({ error: 'not_found' });
+  return res.status(200).json(updated);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function getContentByUser(req: Request, res: Response, next: NextFunction) {
+  try {
+    // prefer authenticated user
+    // @ts-ignore
+    const userId = req.user?.id ?? (req.params.userId ? Number(req.params.userId) : undefined);
+    if (!userId) return res.status(401).json({ error: 'unauthenticated' });
+
+  const list = await service.listContentByUser(Number(userId));
+  return res.status(200).json(list);
   } catch (err) {
     return next(err);
   }
