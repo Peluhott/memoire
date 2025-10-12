@@ -1,6 +1,7 @@
 
 import * as repo from './content.repository';
 import { uploadProductImage } from '../util/uploadImage';
+import { getSignedImageUrl } from '../util/getSignedImage';
 
 // Create content after optionally checking a per-user limit (limit optional)
 export async function createContent(
@@ -57,3 +58,13 @@ export async function getUserContentCount(userId: number) {
 	return await repo.getContentCountByUser(userId);
 }
 
+// Return a signed URL for the content's image (or null if not found / not an image)
+export async function getSignedUrlForContent(contentId: number): Promise<string | null> {
+	const content = await repo.getContentById(contentId);
+	if (!content) return null;
+	const publicId = (content as any).public_id as string | undefined;
+	const resourceType = (content as any).resource_type as string | undefined;
+	if (!publicId || !resourceType) return null;
+	return getSignedImageUrl(publicId, resourceType);
+}
+// create a type for content
