@@ -30,6 +30,10 @@ export async function getContentByUser(userId: number) {
 	});
 }
 
+export async function getContentById(contentId: number) {
+  return await prisma.content.findUnique({ where: { id: contentId } });
+}
+
 export async function toggleSharedWithNetwork(contentId: number) {
 	const item = await prisma.content.findUnique({ where: { id: contentId } });
 	if (!item) return null;
