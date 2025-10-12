@@ -47,3 +47,16 @@ export async function uploadContent(req: Request, res: Response, next: NextFunct
     return next(err);
   }
 }
+
+export async function getContentSignedUrl(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = Number(req.params.id ?? req.body.id);
+    if (!id || Number.isNaN(id)) return res.status(400).json({ error: 'invalid_content_id' });
+
+    const url = await service.getSignedUrlForContent(id);
+    if (!url) return res.status(404).json({ error: 'not_found' });
+    return res.json({ url });
+  } catch (err) {
+    return next(err);
+  }
+}
