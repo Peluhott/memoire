@@ -4,6 +4,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import userRouter from './user/user.routes'
 import cors from 'cors';
+import contentRouter from './content/content.routes'
 
 
 dotenv.config();
@@ -20,6 +21,7 @@ app.use(cors({
     credentials: true
 }))
 app.use('/user', userRouter );
+app.use('/content', contentRouter)
 
 
 
