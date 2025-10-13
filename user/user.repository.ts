@@ -8,7 +8,10 @@ export async function insertUser(username: string, password: string, email: stri
             data: {
                 username,
                 password,
-                email
+                email,
+                // initial limits
+                limit_upload: 5,
+                limit_connections: 25,
             }
         });
         // Create a HealthData row for each HealthType
