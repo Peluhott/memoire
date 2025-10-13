@@ -22,6 +22,8 @@ model user {
   content           content[]
   limit_upload      Int
   limit_connections Int
+  connectionsA      Connection[] @relation("connectionsA")
+  connectionsB      Connection[] @relation("connectionsB")
 }
 
 model content {
@@ -53,4 +55,24 @@ enum HealthType {
   rhrBaseline
   sleepBaseline
   stepsBaseline
+}
+
+model Connection {
+  id        Int              @id @default(autoincrement())
+  userA     user             @relation("connectionsA", fields: [userAId], references: [id])
+  userAId   Int
+  userB     user             @relation("connectionsB", fields: [userBId], references: [id])
+  userBId   Int
+  requester Int // <-- who initiated the request (user id)
+  status    ConnectionStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([userAId, userBId])
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
 }
