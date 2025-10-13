@@ -14,29 +14,32 @@ datasource db {
 }
 
 model user {
-  id                Int          @id @default(autoincrement())
-  username          String       @unique
-  password          String
-  email             String       @unique
-  healthData        HealthData[]
-  content           content[]
-  limit_upload      Int
-  limit_connections Int
-  connectionsA      Connection[] @relation("connectionsA")
-  connectionsB      Connection[] @relation("connectionsB")
+  id                 Int          @id @default(autoincrement())
+  username           String       @unique
+  password           String
+  email              String       @unique
+  healthData         HealthData[]
+  content            content[]
+  limit_upload       Int
+  limit_connections  Int
+  connectionsA       Connection[] @relation("connectionsA")
+  connectionsB       Connection[] @relation("connectionsB")
+  deliveriesReceived Delivery[]   @relation("DeliveriesReceived")
+  deliveriesSent     Delivery[]   @relation("DeliveriesSent")
 }
 
 model content {
-  id                  Int      @id @default(autoincrement())
+  id                  Int        @id @default(autoincrement())
   user_id             Int
-  user                user     @relation(fields: [user_id], references: [id])
+  user                user       @relation(fields: [user_id], references: [id])
   public_id           String
   resource_type       String
   type                String
   title               String
   description         String
   shared_with_network Boolean
-  uploaded_at         DateTime @default(now())
+  uploaded_at         DateTime   @default(now())
+  deliveries          Delivery[]
 }
 
 model HealthData {
@@ -75,4 +78,34 @@ enum ConnectionStatus {
   PENDING
   ACCEPTED
   BLOCKED
+}
+
+enum DeliveryStatus {
+  DELIVERED
+  OPENED
+  EXPIRED
+  FAILED
+}
+
+model Delivery {
+  id         Int            @id @default(autoincrement())
+  contentId  Int
+  receiverId Int
+  senderId   Int
+  timesSeen  Int            @default(0)
+  dateSent   DateTime       @default(now())
+  dateSeen   DateTime?
+  status     DeliveryStatus @default(DELIVERED)
+  // expiresAt is set by the database to 24 hours after insertion
+  expiresAt  DateTime       @default(dbgenerated("now() + interval '24 hours'"))
+
+  // Relations
+  content  content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  receiver user    @relation("DeliveriesReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender   user    @relation("DeliveriesSent", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([receiverId, dateSent], map: "idx_delivery_receiver_datesent")
+  @@index([contentId, receiverId], map: "idx_delivery_content_receiver")
+  @@index([senderId], map: "idx_delivery_sender")
+  @@index([expiresAt], map: "idx_delivery_expiresat")
 }
