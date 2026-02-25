@@ -2,20 +2,20 @@
 
 ---
 ## App overview
-> An app that detects when users are feeling sad (using low hrv which is #1 predictor and sleep quality too in order to have more consistent results) and sends them something positive to keep their spirits up. 
+> An app that sends users random positive content to keep their spirits up. Users can also receive random positive feedback from their friend network.
 ---
 ## System Flow
-> User frontend app will request permission from wearables for data, send that data to backend where it will be stored. Backend will send notication to front end with content if low mood status is trigged or if user has automatic positive vibes set. User will open it, could be theirs or could be sent one from the database of shared content the backend owns, user if shown something from this will be able to like,share, save . 
+> Backend will randomly send a notification to the frontend with positive content. Content can come from the app's shared database or from a user's friends. Users will open the notification and can like, save, or share the content they receive.
 ---
 ## User Functions
-> User will be able to log in and select the wearable they will be using or select to self-report.
-> Users will be able to upload their own positive things  and have the option to share their uploads.
-> Users will be shown something positive when low mood is detected, if not their own content they will have the ability to like it, the option to save it, and the option to share with others.
+> User will be able to log in and manage their friend network.
+> Users will be able to upload their own positive content and have the option to share their uploads.
+> Users will randomly receive something positive — either from the shared content database or as positive feedback sent by a friend. If shown content from the database, they will have the ability to like it, save it, and share it with others.
 ---
 ## Features
-> For wearables (apple watch, fitbit, oura ring).
-> For self-report options to report daily or weekly.
-> Also able to choose to be automatically send something positive regardless of data and able to choose frequency(but limited to twice a day max).
+> Randomly delivered positive content — users can choose frequency (limited to twice a day max).
+> Friend network — users can send and receive random positive feedback from friends.
+> Content uploads — users can upload and optionally share their own positive content.
 ---
 ## Other
 > Maybe use ai to parse content and keep metadata about it, so when sent to user it can be sent with a nice message. A title can be generated, and keywords about it could be kept.
