@@ -1,33 +1,43 @@
-#project memoire(temporaryname)
+# Memoire
 
----
-## App overview
-> An app that sends users random positive content to keep their spirits up. Content is drawn from the user's own memory bank of uploaded moments, or from the memory banks of friends who have chosen to share their content. Users can also receive random positive feedback directly from friends in their network.
----
-## System Flow
-> Backend will randomly send a notification to the frontend with positive content. Content is sourced from the user's own memory bank of uploaded moments or from the memory banks of friends who have opted to share their content. Users will open the notification and can like, save, or share the content they receive.
----
-## User Functions
-> User will be able to log in and manage their friend network.
-> Users will be able to upload their own positive content and have the option to share their uploads.
-> Users will randomly receive something positive — either from their own memory bank of uploaded moments or from the memory banks of friends who have chosen to share certain content. If shown a friend's content, they will have the ability to like it, save it, and share it with others.
----
-## Features
-> Randomly delivered positive content — sourced from the user's own memory bank or from friends' memory banks (for content friends have chosen to share). Users can choose frequency (limited to twice a day max).
-> Friend network — users can send and receive random positive feedback from friends.
-> Content uploads — users can upload and optionally share their own positive content.
----
-## Other
-> Maybe use ai to parse content and keep metadata about it, so when sent to user it can be sent with a nice message. A title can be generated, and keywords about it could be kept.
----
+Memoire is a small v1 app for resurfacing meaningful memories by email.
 
-## TechStack
-> Backend – node.js , typescript
-> Database – postgresql
-> Content storage - cloudinary
-> Frontend – swift, react native
-> Authentication – token , google, facebook, apple
-> Extra- openai api for content sentiment analysis
+The current product goal is narrow:
 
----
+1. Sign up
+2. Log in
+3. Upload a photo with a description
+4. Receive a random memory link by email
+5. Open the link and view the memory
 
+## Repo Layout
+
+- `server/`: Express + TypeScript API, Prisma schema, upload and delivery logic
+- `client/vite-project/`: React web client scaffold for the v1 frontend
+- `agent.md`: project constraints and implementation guidance
+- `spec.md`: product and engineering spec for v1
+- `tasks.md`: lightweight status list for current work
+
+## v1 Scope
+
+In scope:
+
+- User sign-up and login
+- Memory upload with photo and description
+- Memory storage
+- Random memory delivery by email
+- Viewing a delivered memory
+
+Out of scope:
+
+- Friend connections
+- Social sharing
+- AI-generated messages
+- Notifications beyond email
+- Health tracking
+
+## Current State
+
+- Backend user creation and login are implemented
+- Frontend exists as an initial React app scaffold and still needs Memoire-specific screens
+- Email delivery setup is planned but not fully wired
