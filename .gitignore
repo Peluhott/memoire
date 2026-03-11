@@ -1,8 +1,16 @@
 dist/
 build/
 .env
+.env.*
 node_modules
 /prisma/migrations
 /generated/prisma
 .vscode
 .dockerignore
+.DS_Store
+*.tsbuildinfo
+agent.md
+handoff.md
+spec.md
+tasks.md
+results.md
