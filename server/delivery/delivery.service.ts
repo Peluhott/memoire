@@ -2,6 +2,7 @@ import prisma from "../prisma/prisma";
 import { Resend } from "resend";
 import * as deliveryRepo from "./delivery.repository";
 import { getChatCompletion } from "../util/chatcompletion";
+import { getSignedImageUrl } from "../util/getSignedImage";
 
 /**
  * Send a delivery: create it if there's no active delivery for the receiver.
@@ -127,7 +128,11 @@ export async function getDeliveryHistory(
   });
 }
 
-export async function sendTestEmail(email: string, message: string) {
+export async function sendTestEmail(
+  email: string,
+  message: string,
+  attachmentPath?: string,
+) {
   const trimmedEmail = email.trim();
   if (!trimmedEmail) {
     const error: any = new Error("email is required");
@@ -142,6 +147,8 @@ export async function sendTestEmail(email: string, message: string) {
     throw error;
   }
 
+  const trimmedAttachmentPath = attachmentPath?.trim();
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     const error: any = new Error("RESEND_API_KEY is not configured");
@@ -153,6 +160,7 @@ export async function sendTestEmail(email: string, message: string) {
   console.log("[delivery.sendTestEmail] sending email", {
     to: trimmedEmail,
     subject: "testing to see if it works",
+    hasAttachment: Boolean(trimmedAttachmentPath),
   });
   const { data, error } = await resend.emails.send({
     from: "onboarding@resend.dev",
@@ -164,6 +172,14 @@ export async function sendTestEmail(email: string, message: string) {
         <p>${trimmedMessage}</p>
       </div>
     `,
+    attachments: trimmedAttachmentPath
+      ? [
+          {
+            path: trimmedAttachmentPath,
+            filename: "memory.jpg",
+          },
+        ]
+      : undefined,
   });
 
   if (error) {
@@ -220,18 +236,23 @@ export async function generateAndSendMessageEmail(
   email: string,
   title: string,
   description: string,
+  publicId?: string,
+  resourceType?: string,
 ) {
   console.log("[delivery.generateAndSendMessageEmail] start", {
     to: email,
     title,
   });
   const message = await generateMessageFromImage(title, description);
-  const result = await sendTestEmail(email, message);
+  const attachmentPath =
+    publicId && resourceType ? getSignedImageUrl(publicId, resourceType) : undefined;
+  const result = await sendTestEmail(email, message, attachmentPath);
 
   console.log("[delivery.generateAndSendMessageEmail] complete", {
     to: email,
     title,
     id: result?.id,
+    hasAttachment: Boolean(attachmentPath),
   });
   return {
     message,

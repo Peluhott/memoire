@@ -69,12 +69,15 @@ export async function sendGeneratedMessageEmailHandler(req: Request, res: Respon
 
   const title = typeof req.body.title === 'string' ? req.body.title : '';
   const description = typeof req.body.description === 'string' ? req.body.description : '';
+  const publicId = typeof req.body.publicId === 'string' ? req.body.publicId : '';
+  const resourceType = typeof req.body.resourceType === 'string' ? req.body.resourceType : '';
 
   try {
     console.log('[delivery.sendGeneratedMessageEmailHandler] request received', {
       userId,
       title,
       hasDescription: Boolean(description),
+      hasAttachment: Boolean(publicId && resourceType),
     });
     const user = await userRepository.getUserById(Number(userId));
     if (!user?.email) return res.status(404).json({ error: 'user email not found' });
@@ -83,6 +86,8 @@ export async function sendGeneratedMessageEmailHandler(req: Request, res: Respon
       user.email,
       title,
       description,
+      publicId,
+      resourceType,
     );
 
     return res.status(200).json({
