@@ -2,6 +2,7 @@
 import * as repo from './content.repository';
 import { uploadProductImage } from '../util/uploadImage';
 import { getSignedImageUrl } from '../util/getSignedImage';
+import { deleteProductImage } from '../util/deleteImage';
 
 function withImageUrl<T extends { public_id: string; resource_type: string }>(content: T) {
 	return {
@@ -75,4 +76,15 @@ export async function getSignedUrlForContent(contentId: number, userId: number):
 	if (!publicId || !resourceType) return null;
 	return getSignedImageUrl(publicId, resourceType);
 }
-// create a type for content
+
+export async function deleteContent(contentId: number, userId: number) {
+	const content = await repo.getContentByIdForUser(contentId, userId);
+	if (!content) {
+		return null;
+	}
+
+	await deleteProductImage(content.public_id, content.resource_type);
+	await repo.deleteContentByIdForUser(contentId, userId);
+
+	return content;
+}

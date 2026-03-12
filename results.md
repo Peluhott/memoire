@@ -85,3 +85,5 @@
 
 - Updated generated delivery emails to accept the selected Cloudinary image identity and attach the signed asset URL when the email is sent.
 - Kept Resend's `from` address unchanged and verified the backend with `npm run typecheck`.
+
+

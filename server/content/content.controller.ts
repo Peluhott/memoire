@@ -90,3 +90,20 @@ export async function getContentByUser(req: Request, res: Response, next: NextFu
     return next(err);
   }
 }
+
+export async function deleteContent(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'unauthenticated' });
+
+    const id = Number(req.params.id);
+    if (!id || Number.isNaN(id)) return res.status(400).json({ error: 'invalid_content_id' });
+
+    const deleted = await service.deleteContent(id, Number(userId));
+    if (!deleted) return res.status(404).json({ error: 'not_found' });
+
+    return res.status(200).json({ message: 'content deleted', content: deleted });
+  } catch (err) {
+    return next(err);
+  }
+}
