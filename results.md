@@ -86,7 +86,4 @@
 - Updated generated delivery emails to accept the selected Cloudinary image identity and attach the signed asset URL when the email is sent.
 - Kept Resend's `from` address unchanged and verified the backend with `npm run typecheck`.
 
-## 2026-03-12 09:43:37 EDT
 
-- Added an authenticated `DELETE /content/:id` route with controller, service, and repository support so users can remove their own uploaded memories.
-- Added Cloudinary asset deletion before removing the database row and verified the backend with `npm run typecheck`.
