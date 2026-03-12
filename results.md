@@ -107,3 +107,15 @@
 - Added a lightweight Jest setup for the server using a local TypeScript transformer instead of adding `ts-jest`.
 - Added focused service-level unit tests for `user`, `content`, `delivery`, and a minimal validation test for `connection`.
 - Verified the server with `npm test` and `npm run typecheck`.
+
+## 2026-03-12 11:02:53 EDT
+
+- Added Dockerfiles for the server and client plus tracked `.dockerignore` files for each image build context.
+- Added an Nginx config for the client image and changed server CORS to the hard-coded client origin `http://localhost:8080`.
+- Verified the server with `npm run typecheck` and the client with `npm run build`.
+- Docker image builds could not be completed in this session because the local Docker daemon was not reachable.
+
+## 2026-03-12 11:18:26 EDT
+
+- Added a root `docker-compose.yml` that runs both containers and injects the server runtime secrets from `server/.env`.
+- Verified the compose file with `docker compose config`.
