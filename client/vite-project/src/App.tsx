@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import './App.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
@@ -24,20 +24,22 @@ function App() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [token, setToken] = useState('')
-  const [revokedToken, setRevokedToken] = useState('')
-  const [status, setStatus] = useState('Ready to create a user or log in.')
+  const [status, setStatus] = useState('Log in to view your memories.')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingUploads, setIsLoadingUploads] = useState(false)
+  const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [sendingEmailId, setSendingEmailId] = useState<number | null>(null)
-  const [activeView, setActiveView] = useState<'auth' | 'uploads' | 'upload'>('auth')
+  const [deletingId, setDeletingId] = useState<number | null>(null)
   const [contentItems, setContentItems] = useState<ContentCard[]>([])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [file, setFile] = useState<File | null>(null)
 
+  const isLoggedIn = token.length > 0
+
   async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${path}`, init)
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
       throw new Error(data.message ?? data.error ?? 'Request failed')
@@ -49,18 +51,16 @@ function App() {
   async function createUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsSubmitting(true)
-    setStatus('Creating user...')
+    setStatus('Creating your account...')
 
     try {
       await fetchJson('/user/create', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, username, password }),
       })
 
-      setStatus('User created. You can now log in with the same username and password.')
+      setStatus('Account created. Log in with the same username and password.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'User creation failed')
     } finally {
@@ -68,24 +68,19 @@ function App() {
     }
   }
 
-  async function login(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function login() {
     setIsSubmitting(true)
     setStatus('Logging in...')
 
     try {
       const data = await fetchJson<{ token: string }>('/user/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       })
 
       setToken(data.token)
-      setRevokedToken('')
-      setActiveView('uploads')
-      setStatus('Login succeeded. Loading your uploads...')
+      setStatus('Login succeeded. Loading memories...')
       await loadUploads(data.token)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Login failed')
@@ -94,59 +89,49 @@ function App() {
     }
   }
 
-  async function logout(currentToken: string, mode: 'active' | 'revoked') {
+  async function logout() {
+    if (!token) {
+      setStatus('Login required.')
+      return
+    }
+
     setIsSubmitting(true)
-    setStatus(mode === 'active' ? 'Logging out...' : 'Verifying revoked token...')
+    setStatus('Logging out...')
 
     try {
       await fetchJson('/user/logout', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${currentToken}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       })
 
-      if (mode === 'active') {
-        setRevokedToken(currentToken)
-        setToken('')
-        setContentItems([])
-        setActiveView('auth')
-        setStatus('Logout succeeded. Use "Verify Revoked Token" to confirm the old token no longer works.')
-      } else {
-        setStatus('Revoked token unexpectedly still worked.')
-      }
+      setToken('')
+      setContentItems([])
+      setIsUploadOpen(false)
+      setStatus('Logged out.')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Logout failed'
-
-      if (mode === 'revoked') {
-        setStatus(`Revoked token rejected as expected: ${message}`)
-      } else {
-        setStatus(message)
-      }
+      setStatus(error instanceof Error ? error.message : 'Logout failed')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   async function loadUploads(authToken = token) {
-    if (!authToken) return
+    if (!authToken) {
+      return
+    }
 
     setIsLoadingUploads(true)
 
     try {
       const items = await fetchJson<ContentItem[]>('/content', {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: { Authorization: `Bearer ${authToken}` },
       })
 
       const withUrls = await Promise.all(
         items.map(async (item) => {
           try {
             const signed = await fetchJson<{ url: string }>(`/content/${item.id}/url`, {
-              headers: {
-                Authorization: `Bearer ${authToken}`,
-              },
+              headers: { Authorization: `Bearer ${authToken}` },
             })
 
             return { ...item, signedUrl: signed.url }
@@ -157,7 +142,7 @@ function App() {
       )
 
       setContentItems(withUrls)
-      setStatus(items.length > 0 ? 'Uploads loaded.' : 'No uploads yet. Add your first memory.')
+      setStatus(withUrls.length > 0 ? 'Memories loaded.' : 'No memories yet. Upload one to get started.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Could not load uploads')
     } finally {
@@ -165,7 +150,7 @@ function App() {
     }
   }
 
-  async function uploadContent(event: FormEvent<HTMLFormElement>) {
+  async function submitUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (!token) {
@@ -174,7 +159,7 @@ function App() {
     }
 
     if (!file) {
-      setStatus('Choose an image file before uploading.')
+      setStatus('Choose an image before uploading.')
       return
     }
 
@@ -189,18 +174,16 @@ function App() {
 
       await fetchJson('/content', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       })
 
       setTitle('')
       setDescription('')
       setFile(null)
-      setActiveView('uploads')
+      setIsUploadOpen(false)
       await loadUploads(token)
-      setStatus('Upload complete.')
+      setStatus('Memory uploaded.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Upload failed')
     } finally {
@@ -208,39 +191,14 @@ function App() {
     }
   }
 
-  async function sendTestEmail() {
-    if (!token) {
-      setStatus('Login required before sending a test email.')
-      return
-    }
-
-    setIsSubmitting(true)
-    setStatus('Sending test email...')
-
-    try {
-      await fetchJson('/deliveries/test-email', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      setStatus('Test email sent.')
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Could not send test email')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   async function sendImageEmail(item: ContentCard) {
     if (!token) {
-      setStatus('Login required before sending an image email.')
+      setStatus('Login required before sending an email.')
       return
     }
 
     setSendingEmailId(item.id)
-    setStatus(`Sending generated email for "${item.title}"...`)
+    setStatus(`Sending email for "${item.title}"...`)
 
     try {
       await fetchJson('/deliveries/generated-email', {
@@ -252,6 +210,8 @@ function App() {
         body: JSON.stringify({
           title: item.title,
           description: item.description,
+          publicId: item.public_id,
+          resourceType: item.resource_type,
         }),
       })
 
@@ -263,67 +223,65 @@ function App() {
     }
   }
 
-  const hasActiveToken = token.length > 0
-  const hasRevokedToken = revokedToken.length > 0
+  async function removeContent(item: ContentCard) {
+    if (!token) {
+      setStatus('Login required before deleting.')
+      return
+    }
+
+    setDeletingId(item.id)
+    setStatus(`Deleting "${item.title}"...`)
+
+    try {
+      await fetchJson(`/content/${item.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      setContentItems((current) => current.filter((entry) => entry.id !== item.id))
+      setStatus(`Deleted "${item.title}".`)
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Delete failed')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    setFile(event.target.files?.[0] ?? null)
+  }
 
   return (
-    <main className="page-shell">
-      <section className="panel hero-panel">
-        <p className="eyebrow">Memoire v1</p>
-        <h1>Login, browse uploads, and add new memories</h1>
-        <p className="hero-copy">
-          This small client talks directly to the existing backend so you can create
-          an account, log in, review uploaded memories, and add more content.
-        </p>
-        <dl className="meta-grid">
-          <div>
-            <dt>API base</dt>
-            <dd>{API_BASE_URL}</dd>
-          </div>
-          <div>
-            <dt>Flow</dt>
-            <dd>Create user -&gt; Login -&gt; My uploads -&gt; Upload memory</dd>
-          </div>
-        </dl>
-      </section>
+    <div className="app-shell">
+      <header className="topbar">
+        <button disabled={isLoggedIn || isSubmitting} type="button" onClick={() => void login()}>
+          Login
+        </button>
+        <p className="brand">Memoire</p>
+        <button
+          className="ghost-button"
+          disabled={!isLoggedIn || isSubmitting}
+          type="button"
+          onClick={() => void logout()}
+        >
+          Logout
+        </button>
+      </header>
 
-      <section className="panel nav-panel">
-        <div className="tab-row">
-          <button
-            className={activeView === 'auth' ? 'tab-button is-active' : 'tab-button'}
-            type="button"
-            onClick={() => setActiveView('auth')}
-          >
-            Auth
-          </button>
-          <button
-            className={activeView === 'uploads' ? 'tab-button is-active' : 'tab-button'}
-            disabled={!hasActiveToken}
-            type="button"
-            onClick={() => {
-              setActiveView('uploads')
-              void loadUploads()
-            }}
-          >
-            My Uploads
-          </button>
-          <button
-            className={activeView === 'upload' ? 'tab-button is-active' : 'tab-button'}
-            disabled={!hasActiveToken}
-            type="button"
-            onClick={() => setActiveView('upload')}
-          >
-            Upload
-          </button>
-        </div>
-      </section>
+      <main className="layout">
+        <section className="hero-card">
+          <p className="eyebrow">Memory delivery</p>
+          <h1>Your memories, one place.</h1>
+          <p className="hero-copy">
+            Log in, review your uploaded photos, send yourself a generated email, and delete the ones you no longer want to keep.
+          </p>
+          <p className="status-line">{status}</p>
+        </section>
 
-      {activeView === 'auth' && (
-        <section className="panel">
-          <div className="form-stack">
+        <section className="auth-card">
+          <div className="auth-columns">
             <form className="auth-form" onSubmit={createUser}>
-              <p className="section-heading">Create user</p>
-
+              <h2>Create account</h2>
               <label>
                 <span>Email</span>
                 <input
@@ -331,20 +289,16 @@ function App() {
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="enter an email"
                 />
               </label>
-
               <label>
                 <span>Username</span>
                 <input
                   autoComplete="username"
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  placeholder="enter a username"
                 />
               </label>
-
               <label>
                 <span>Password</span>
                 <input
@@ -352,32 +306,23 @@ function App() {
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="enter a password"
                 />
               </label>
-
-              <div className="action-row">
-                <button disabled={isSubmitting} type="submit">
-                  {isSubmitting ? 'Working...' : 'Create User'}
-                </button>
-              </div>
+              <button disabled={isSubmitting} type="submit">
+                {isSubmitting ? 'Working...' : 'Create Account'}
+              </button>
             </form>
 
-            <div className="divider" aria-hidden="true" />
-
-            <form className="auth-form" onSubmit={login}>
-              <p className="section-heading">Login</p>
-
+            <section className="auth-form login-panel">
+              <h2>Login</h2>
               <label>
                 <span>Username</span>
                 <input
                   autoComplete="username"
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  placeholder="enter a username"
                 />
               </label>
-
               <label>
                 <span>Password</span>
                 <input
@@ -385,53 +330,32 @@ function App() {
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="enter a password"
                 />
               </label>
-
-              <div className="action-row">
-                <button disabled={isSubmitting} type="submit">
-                  {isSubmitting ? 'Working...' : 'Login'}
-                </button>
-                <button
-                  disabled={isSubmitting || !hasActiveToken}
-                  type="button"
-                  onClick={() => void logout(token, 'active')}
-                >
-                  Logout
-                </button>
-                <button
-                  className="ghost-button"
-                  disabled={isSubmitting || !hasRevokedToken}
-                  type="button"
-                  onClick={() => void logout(revokedToken, 'revoked')}
-                >
-                  Verify Revoked Token
-                </button>
-              </div>
-            </form>
+              <button disabled={isSubmitting} type="button" onClick={() => void login()}>
+                {isSubmitting ? 'Working...' : 'Login'}
+              </button>
+            </section>
           </div>
         </section>
-      )}
 
-      {activeView === 'uploads' && (
-        <section className="panel">
-          <div className="section-head">
+        <section className="memories-card">
+          <div className="section-header">
             <div>
-              <p className="section-heading">My uploads</p>
-              <p className="section-subcopy">Signed previews are requested for each item when possible.</p>
+              <p className="eyebrow">Main page</p>
+              <h2>Uploads</h2>
             </div>
-            <div className="action-row">
+            <div className="toolbar">
               <button
-                disabled={isSubmitting || !hasActiveToken}
+                disabled={!isLoggedIn || isSubmitting}
                 type="button"
-                onClick={() => void sendTestEmail()}
+                onClick={() => setIsUploadOpen((current) => !current)}
               >
-                {isSubmitting ? 'Working...' : 'Send Test Email'}
+                {isUploadOpen ? 'Close Upload' : 'Upload'}
               </button>
               <button
                 className="ghost-button"
-                disabled={isLoadingUploads || !hasActiveToken}
+                disabled={!isLoggedIn || isLoadingUploads}
                 type="button"
                 onClick={() => void loadUploads()}
               >
@@ -440,134 +364,78 @@ function App() {
             </div>
           </div>
 
-          {contentItems.length === 0 ? (
-            <div className="empty-state">
-              <p>No uploads found for this account yet.</p>
-              <button type="button" onClick={() => setActiveView('upload')}>
-                Upload a memory
+          {isUploadOpen ? (
+            <form className="upload-form" onSubmit={submitUpload}>
+              <label>
+                <span>Title</span>
+                <input value={title} onChange={(event) => setTitle(event.target.value)} />
+              </label>
+              <label>
+                <span>Description</span>
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Photo</span>
+                <input accept="image/*" type="file" onChange={handleFileChange} />
+              </label>
+              <button disabled={isSubmitting} type="submit">
+                {isSubmitting ? 'Uploading...' : 'Save Memory'}
               </button>
+            </form>
+          ) : null}
+
+          {!isLoggedIn ? (
+            <div className="empty-state">
+              <p>Log in to view your uploads.</p>
+            </div>
+          ) : contentItems.length === 0 ? (
+            <div className="empty-state">
+              <p>No uploads yet.</p>
             </div>
           ) : (
-            <div className="uploads-grid">
+            <div className="memory-grid">
               {contentItems.map((item) => (
-                <article className="upload-card" key={item.id}>
+                <article className="memory-card" key={item.id}>
                   {item.signedUrl ? (
-                    <img alt={item.title} className="upload-image" src={item.signedUrl} />
+                    <img alt={item.title} className="memory-image" src={item.signedUrl} />
                   ) : (
-                    <div className="image-fallback">No preview available</div>
+                    <div className="memory-fallback">No preview</div>
                   )}
-                  <div className="upload-copy">
-                    <h2>{item.title}</h2>
+                  <div className="memory-copy">
+                    <h3>{item.title}</h3>
                     <p>{item.description || 'No description provided.'}</p>
-                    <div className="action-row">
+                    <div className="memory-meta">
+                      <span>{item.type}</span>
+                      <span>{new Date(item.uploaded_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="memory-actions">
                       <button
-                        disabled={sendingEmailId === item.id || isSubmitting || !hasActiveToken}
+                        disabled={sendingEmailId === item.id || deletingId === item.id}
                         type="button"
                         onClick={() => void sendImageEmail(item)}
                       >
-                        {sendingEmailId === item.id ? 'Sending...' : 'Send Email'}
+                        {sendingEmailId === item.id ? 'Sending...' : 'Generate Email'}
+                      </button>
+                      <button
+                        className="ghost-button danger-button"
+                        disabled={deletingId === item.id || sendingEmailId === item.id}
+                        type="button"
+                        onClick={() => void removeContent(item)}
+                      >
+                        {deletingId === item.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </div>
-                    {item.signedUrl ? (
-                      <a
-                        className="signed-link"
-                        href={item.signedUrl}
-                        rel="noreferrer"
-                        target="_blank"
-                      >
-                        Open signed image
-                      </a>
-                    ) : null}
-                    <dl className="upload-meta">
-                      <div>
-                        <dt>Type</dt>
-                        <dd>{item.type}</dd>
-                      </div>
-                      <div>
-                        <dt>Uploaded</dt>
-                        <dd>{new Date(item.uploaded_at).toLocaleString()}</dd>
-                      </div>
-                    </dl>
                   </div>
                 </article>
               ))}
             </div>
           )}
         </section>
-      )}
-
-      {activeView === 'upload' && (
-        <section className="panel">
-          <form className="auth-form" onSubmit={uploadContent}>
-            <p className="section-heading">Upload content</p>
-            <p className="section-subcopy">This uses the current multipart `/content` endpoint.</p>
-
-            <label>
-              <span>Title</span>
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="give this memory a title"
-              />
-            </label>
-
-            <label>
-              <span>Description</span>
-              <textarea
-                className="text-area"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="describe the memory"
-              />
-            </label>
-
-            <label>
-              <span>Image file</span>
-              <input
-                accept="image/*"
-                className="file-input"
-                type="file"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              />
-            </label>
-
-            <div className="action-row">
-              <button disabled={isSubmitting} type="submit">
-                {isSubmitting ? 'Uploading...' : 'Upload Memory'}
-              </button>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => {
-                  setActiveView('uploads')
-                  void loadUploads()
-                }}
-              >
-                Back to uploads
-              </button>
-            </div>
-          </form>
-        </section>
-      )}
-
-      <section className="panel status-panel">
-        <div>
-          <p className="section-label">Status</p>
-          <p className="status-copy">{status}</p>
-        </div>
-
-        <div className="token-grid">
-          <article>
-            <p className="section-label">Active token</p>
-            <code>{hasActiveToken ? token : 'none'}</code>
-          </article>
-          <article>
-            <p className="section-label">Last revoked token</p>
-            <code>{hasRevokedToken ? revokedToken : 'none'}</code>
-          </article>
-        </div>
-      </section>
-    </main>
+      </main>
+    </div>
   )
 }
 
