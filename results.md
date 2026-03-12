@@ -96,3 +96,14 @@
 - Replaced the frontend test-style flow with a simpler Memoire UI centered on a top nav, auth actions, uploads list, and an inline upload panel.
 - Added per-memory `Generate Email` and `Delete` actions on the main uploads page and verified the frontend with `npm run build`.
 
+## 2026-03-12 10:04:06 EDT
+
+- Changed generated memory emails to embed the selected photo directly in the HTML body instead of sending it as a file attachment.
+- Split the client into a dedicated auth page and a separate logged-in homepage while keeping the existing `Generate Email` and `Delete` actions on uploads.
+- Verified the backend with `npm run typecheck` and the frontend with `npm run build`.
+
+## 2026-03-12 10:36:23 EDT
+
+- Added a lightweight Jest setup for the server using a local TypeScript transformer instead of adding `ts-jest`.
+- Added focused service-level unit tests for `user`, `content`, `delivery`, and a minimal validation test for `connection`.
+- Verified the server with `npm test` and `npm run typecheck`.

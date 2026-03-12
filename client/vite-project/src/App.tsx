@@ -24,7 +24,7 @@ function App() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [token, setToken] = useState('')
-  const [status, setStatus] = useState('Log in to view your memories.')
+  const [status, setStatus] = useState('Create an account or log in to get started.')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingUploads, setIsLoadingUploads] = useState(false)
   const [isUploadOpen, setIsUploadOpen] = useState(false)
@@ -68,7 +68,8 @@ function App() {
     }
   }
 
-  async function login() {
+  async function login(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     setIsSubmitting(true)
     setStatus('Logging in...')
 
@@ -80,7 +81,7 @@ function App() {
       })
 
       setToken(data.token)
-      setStatus('Login succeeded. Loading memories...')
+      setIsUploadOpen(false)
       await loadUploads(data.token)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Login failed')
@@ -91,7 +92,6 @@ function App() {
 
   async function logout() {
     if (!token) {
-      setStatus('Login required.')
       return
     }
 
@@ -153,13 +153,8 @@ function App() {
   async function submitUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!token) {
-      setStatus('Login required before uploading.')
-      return
-    }
-
-    if (!file) {
-      setStatus('Choose an image before uploading.')
+    if (!token || !file) {
+      setStatus(!token ? 'Login required before uploading.' : 'Choose an image before uploading.')
       return
     }
 
@@ -251,34 +246,19 @@ function App() {
     setFile(event.target.files?.[0] ?? null)
   }
 
-  return (
-    <div className="app-shell">
-      <header className="topbar">
-        <button disabled={isLoggedIn || isSubmitting} type="button" onClick={() => void login()}>
-          Login
-        </button>
-        <p className="brand">Memoire</p>
-        <button
-          className="ghost-button"
-          disabled={!isLoggedIn || isSubmitting}
-          type="button"
-          onClick={() => void logout()}
-        >
-          Logout
-        </button>
-      </header>
-
-      <main className="layout">
-        <section className="hero-card">
-          <p className="eyebrow">Memory delivery</p>
-          <h1>Your memories, one place.</h1>
+  if (!isLoggedIn) {
+    return (
+      <div className="auth-page">
+        <section className="auth-hero">
+          <p className="eyebrow">Memoire</p>
+          <h1>Resurface the moments worth keeping.</h1>
           <p className="hero-copy">
-            Log in, review your uploaded photos, send yourself a generated email, and delete the ones you no longer want to keep.
+            Create an account or log in to manage your uploads, send memory emails, and clean up your collection.
           </p>
           <p className="status-line">{status}</p>
         </section>
 
-        <section className="auth-card">
+        <section className="auth-page-card">
           <div className="auth-columns">
             <form className="auth-form" onSubmit={createUser}>
               <h2>Create account</h2>
@@ -313,7 +293,7 @@ function App() {
               </button>
             </form>
 
-            <section className="auth-form login-panel">
+            <form className="auth-form login-panel" onSubmit={login}>
               <h2>Login</h2>
               <label>
                 <span>Username</span>
@@ -332,39 +312,48 @@ function App() {
                   onChange={(event) => setPassword(event.target.value)}
                 />
               </label>
-              <button disabled={isSubmitting} type="button" onClick={() => void login()}>
+              <button disabled={isSubmitting} type="submit">
                 {isSubmitting ? 'Working...' : 'Login'}
               </button>
-            </section>
+            </form>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
+  return (
+    <div className="home-shell">
+      <header className="topbar">
+        <button type="button" onClick={() => setIsUploadOpen((current) => !current)}>
+          {isUploadOpen ? 'Close Upload' : 'Upload'}
+        </button>
+        <p className="brand">Memoire</p>
+        <button className="ghost-button" disabled={isSubmitting} type="button" onClick={() => void logout()}>
+          Logout
+        </button>
+      </header>
+
+      <main className="layout">
+        <section className="home-hero">
+          <div>
+            <p className="eyebrow">Homepage</p>
+            <h1>Your uploads</h1>
+          </div>
+          <div className="toolbar">
+            <button
+              className="ghost-button"
+              disabled={isLoadingUploads}
+              type="button"
+              onClick={() => void loadUploads()}
+            >
+              {isLoadingUploads ? 'Refreshing...' : 'Refresh'}
+            </button>
           </div>
         </section>
 
-        <section className="memories-card">
-          <div className="section-header">
-            <div>
-              <p className="eyebrow">Main page</p>
-              <h2>Uploads</h2>
-            </div>
-            <div className="toolbar">
-              <button
-                disabled={!isLoggedIn || isSubmitting}
-                type="button"
-                onClick={() => setIsUploadOpen((current) => !current)}
-              >
-                {isUploadOpen ? 'Close Upload' : 'Upload'}
-              </button>
-              <button
-                className="ghost-button"
-                disabled={!isLoggedIn || isLoadingUploads}
-                type="button"
-                onClick={() => void loadUploads()}
-              >
-                {isLoadingUploads ? 'Refreshing...' : 'Refresh'}
-              </button>
-            </div>
-          </div>
-
-          {isUploadOpen ? (
+        {isUploadOpen ? (
+          <section className="upload-panel">
             <form className="upload-form" onSubmit={submitUpload}>
               <label>
                 <span>Title</span>
@@ -385,55 +374,55 @@ function App() {
                 {isSubmitting ? 'Uploading...' : 'Save Memory'}
               </button>
             </form>
-          ) : null}
+          </section>
+        ) : null}
 
-          {!isLoggedIn ? (
-            <div className="empty-state">
-              <p>Log in to view your uploads.</p>
-            </div>
-          ) : contentItems.length === 0 ? (
-            <div className="empty-state">
-              <p>No uploads yet.</p>
-            </div>
-          ) : (
-            <div className="memory-grid">
-              {contentItems.map((item) => (
-                <article className="memory-card" key={item.id}>
-                  {item.signedUrl ? (
-                    <img alt={item.title} className="memory-image" src={item.signedUrl} />
-                  ) : (
-                    <div className="memory-fallback">No preview</div>
-                  )}
-                  <div className="memory-copy">
-                    <h3>{item.title}</h3>
-                    <p>{item.description || 'No description provided.'}</p>
-                    <div className="memory-meta">
-                      <span>{item.type}</span>
-                      <span>{new Date(item.uploaded_at).toLocaleDateString()}</span>
-                    </div>
-                    <div className="memory-actions">
-                      <button
-                        disabled={sendingEmailId === item.id || deletingId === item.id}
-                        type="button"
-                        onClick={() => void sendImageEmail(item)}
-                      >
-                        {sendingEmailId === item.id ? 'Sending...' : 'Generate Email'}
-                      </button>
-                      <button
-                        className="ghost-button danger-button"
-                        disabled={deletingId === item.id || sendingEmailId === item.id}
-                        type="button"
-                        onClick={() => void removeContent(item)}
-                      >
-                        {deletingId === item.id ? 'Deleting...' : 'Delete'}
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
+        <section className="status-card">
+          <p className="status-line">{status}</p>
         </section>
+
+        {contentItems.length === 0 ? (
+          <div className="empty-state">
+            <p>No uploads yet.</p>
+          </div>
+        ) : (
+          <section className="memory-grid">
+            {contentItems.map((item) => (
+              <article className="memory-card" key={item.id}>
+                {item.signedUrl ? (
+                  <img alt={item.title} className="memory-image" src={item.signedUrl} />
+                ) : (
+                  <div className="memory-fallback">No preview</div>
+                )}
+                <div className="memory-copy">
+                  <h3>{item.title}</h3>
+                  <p>{item.description || 'No description provided.'}</p>
+                  <div className="memory-meta">
+                    <span>{item.type}</span>
+                    <span>{new Date(item.uploaded_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="memory-actions">
+                    <button
+                      disabled={sendingEmailId === item.id || deletingId === item.id}
+                      type="button"
+                      onClick={() => void sendImageEmail(item)}
+                    >
+                      {sendingEmailId === item.id ? 'Sending...' : 'Generate Email'}
+                    </button>
+                    <button
+                      className="ghost-button danger-button"
+                      disabled={deletingId === item.id || sendingEmailId === item.id}
+                      type="button"
+                      onClick={() => void removeContent(item)}
+                    >
+                      {deletingId === item.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </section>
+        )}
       </main>
     </div>
   )

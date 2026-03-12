@@ -131,7 +131,7 @@ export async function getDeliveryHistory(
 export async function sendTestEmail(
   email: string,
   message: string,
-  attachmentPath?: string,
+  imageUrl?: string,
 ) {
   const trimmedEmail = email.trim();
   if (!trimmedEmail) {
@@ -147,7 +147,7 @@ export async function sendTestEmail(
     throw error;
   }
 
-  const trimmedAttachmentPath = attachmentPath?.trim();
+  const trimmedImageUrl = imageUrl?.trim();
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -160,7 +160,7 @@ export async function sendTestEmail(
   console.log("[delivery.sendTestEmail] sending email", {
     to: trimmedEmail,
     subject: "testing to see if it works",
-    hasAttachment: Boolean(trimmedAttachmentPath),
+    hasEmbeddedImage: Boolean(trimmedImageUrl),
   });
   const { data, error } = await resend.emails.send({
     from: "onboarding@resend.dev",
@@ -170,16 +170,13 @@ export async function sendTestEmail(
       <div style="font-family: Arial, sans-serif; line-height: 1.5;">
         <h1>Memoire test email</h1>
         <p>${trimmedMessage}</p>
+        ${
+          trimmedImageUrl
+            ? `<img src="${trimmedImageUrl}" alt="Memory photo" style="display:block; max-width:100%; margin-top:16px; border-radius:16px;" />`
+            : ""
+        }
       </div>
     `,
-    attachments: trimmedAttachmentPath
-      ? [
-          {
-            path: trimmedAttachmentPath,
-            filename: "memory.jpg",
-          },
-        ]
-      : undefined,
   });
 
   if (error) {
@@ -244,15 +241,15 @@ export async function generateAndSendMessageEmail(
     title,
   });
   const message = await generateMessageFromImage(title, description);
-  const attachmentPath =
+  const imageUrl =
     publicId && resourceType ? getSignedImageUrl(publicId, resourceType) : undefined;
-  const result = await sendTestEmail(email, message, attachmentPath);
+  const result = await sendTestEmail(email, message, imageUrl);
 
   console.log("[delivery.generateAndSendMessageEmail] complete", {
     to: email,
     title,
     id: result?.id,
-    hasAttachment: Boolean(attachmentPath),
+    hasEmbeddedImage: Boolean(imageUrl),
   });
   return {
     message,

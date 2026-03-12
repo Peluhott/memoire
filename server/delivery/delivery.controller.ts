@@ -77,7 +77,7 @@ export async function sendGeneratedMessageEmailHandler(req: Request, res: Respon
       userId,
       title,
       hasDescription: Boolean(description),
-      hasAttachment: Boolean(publicId && resourceType),
+      hasEmbeddedImage: Boolean(publicId && resourceType),
     });
     const user = await userRepository.getUserById(Number(userId));
     if (!user?.email) return res.status(404).json({ error: 'user email not found' });
