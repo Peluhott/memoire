@@ -56,3 +56,11 @@ export async function getContentCountByUser(userId: number) {
 	return await prisma.content.count({ where: { user_id: userId } });
 }
 
+export async function deleteContentByIdForUser(contentId: number, userId: number) {
+	return await prisma.content.deleteMany({
+		where: {
+			id: contentId,
+			user_id: userId,
+		},
+	});
+}
