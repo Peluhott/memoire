@@ -6,7 +6,9 @@ declare global {
     interface User {
       id: number;
       username?: string;
+      name?: string | null;
       email?: string;
+      profilePictureUrl?: string | null;
       tokenVersion?: number;
       // optional fields useful in controllers
       limit_upload?: number;
