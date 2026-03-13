@@ -16,8 +16,10 @@ datasource db {
 model user {
   id                 Int          @id @default(autoincrement())
   username           String       @unique
+  name               String?
   password           String
   email              String       @unique
+  profilePictureUrl  String?
   tokenVersion       Int          @default(0)
   healthData         HealthData[]
   content            content[]
