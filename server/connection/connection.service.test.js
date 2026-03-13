@@ -1,5 +1,7 @@
 jest.mock('./connection.repository', () => ({
   createConnection: jest.fn(),
+  acceptIncomingConnection: jest.fn(),
+  rejectIncomingConnection: jest.fn(),
 }))
 
 const repository = require('./connection.repository')
@@ -19,5 +21,20 @@ describe('connection.service', () => {
 
     expect(repository.createConnection).toHaveBeenCalledWith(1, 2)
     expect(result).toEqual({ id: 1, userAId: 1, userBId: 2 })
+  })
+
+  test('acceptIncomingConnection forwards valid ids to the repository', async () => {
+    repository.acceptIncomingConnection.mockResolvedValue({ id: 7, status: 'ACCEPTED' })
+
+    const result = await connectionService.acceptIncomingConnection(7, 2)
+
+    expect(repository.acceptIncomingConnection).toHaveBeenCalledWith(7, 2)
+    expect(result).toEqual({ id: 7, status: 'ACCEPTED' })
+  })
+
+  test('rejectIncomingConnection rejects non-integer ids', async () => {
+    await expect(connectionService.rejectIncomingConnection(3, 2.2)).rejects.toThrow(
+      'ids must be integers',
+    )
   })
 })

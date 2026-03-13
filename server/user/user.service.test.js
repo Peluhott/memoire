@@ -1,9 +1,12 @@
 process.env.JWT_SECRET = 'test-secret'
 
 jest.mock('./user.repository', () => ({
+  getUserById: jest.fn(),
   getUserByUsername: jest.fn(),
   incrementUserTokenVersion: jest.fn(),
   insertUser: jest.fn(),
+  updateUserProfile: jest.fn(),
+  updateUserPassword: jest.fn(),
 }))
 
 jest.mock('bcrypt', () => ({
@@ -15,9 +18,14 @@ jest.mock('jsonwebtoken', () => ({
   sign: jest.fn(),
 }))
 
+jest.mock('../util/uploadImage', () => ({
+  uploadProfileImage: jest.fn(),
+}))
+
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const userRepository = require('./user.repository')
+const { uploadProfileImage } = require('../util/uploadImage')
 const userService = require('./user.service.ts')
 
 describe('user.service', () => {
@@ -76,5 +84,25 @@ describe('user.service', () => {
     await userService.logoutUserService(5)
 
     expect(userRepository.incrementUserTokenVersion).toHaveBeenCalledWith(5)
+  })
+
+  test('uploadProfilePictureService uploads the file and stores the returned URL', async () => {
+    const file = { path: '/tmp/avatar.png' }
+    uploadProfileImage.mockResolvedValue({
+      public_id: 'profile-pictures/user-1',
+      secure_url: 'https://res.cloudinary.com/demo/image/upload/avatar.png',
+    })
+    userRepository.updateUserProfile.mockResolvedValue({ id: 5, profilePictureUrl: 'https://res.cloudinary.com/demo/image/upload/avatar.png' })
+
+    const result = await userService.uploadProfilePictureService(5, file)
+
+    expect(uploadProfileImage).toHaveBeenCalledWith(file)
+    expect(userRepository.updateUserProfile).toHaveBeenCalledWith(5, {
+      profilePictureUrl: 'https://res.cloudinary.com/demo/image/upload/avatar.png',
+    })
+    expect(result).toEqual({
+      id: 5,
+      profilePictureUrl: 'https://res.cloudinary.com/demo/image/upload/avatar.png',
+    })
   })
 })
