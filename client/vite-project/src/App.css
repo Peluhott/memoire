@@ -21,7 +21,11 @@
 .home-hero,
 .upload-panel,
 .status-card,
-.empty-state {
+.empty-state,
+.profile-summary,
+.profile-card,
+.connections-hero,
+.connections-card {
   padding: 28px;
   border: 1px solid rgba(96, 71, 45, 0.1);
   border-radius: 28px;
@@ -31,7 +35,11 @@
 
 .auth-hero h1,
 .home-hero h1,
-.auth-form h2 {
+.auth-form h2,
+.profile-summary h1,
+.profile-card h2,
+.connections-hero h1,
+.connections-card h2 {
   margin: 0;
 }
 
@@ -48,20 +56,33 @@
   padding: 18px 0;
 }
 
-.topbar > button:first-of-type {
-  justify-self: start;
-}
-
-.topbar > button:last-of-type {
-  justify-self: end;
-}
-
 .brand {
   margin: 0;
   font-size: clamp(1.35rem, 2vw, 1.8rem);
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
+}
+
+.nav-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-self: start;
+}
+
+.nav-button {
+  min-width: 112px;
+}
+
+.nav-button-active {
+  background: linear-gradient(135deg, #8d4f1e 0%, #be7330 100%);
+  color: #fff9f2;
+  border-color: transparent;
+}
+
+.topbar > button:last-child {
+  justify-self: end;
 }
 
 .layout {
@@ -84,7 +105,11 @@
 .hero-copy,
 .status-line,
 .memory-copy p,
-.auth-form span {
+.auth-form span,
+.profile-form span,
+.empty-copy,
+.person-copy p,
+.profile-summary p {
   color: #5b4838;
 }
 
@@ -106,7 +131,9 @@
 }
 
 .auth-form,
-.upload-form {
+.upload-form,
+.profile-form,
+.search-form {
   display: grid;
   gap: 14px;
 }
@@ -116,7 +143,8 @@
 }
 
 .auth-form label,
-.upload-form label {
+.upload-form label,
+.profile-form label {
   display: grid;
   gap: 8px;
 }
@@ -124,13 +152,18 @@
 .home-hero,
 .toolbar,
 .memory-actions,
-.memory-meta {
+.memory-meta,
+.profile-header,
+.section-heading,
+.person-card {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
 }
 
-.home-hero {
+.home-hero,
+.connections-hero,
+.section-heading {
   justify-content: space-between;
   align-items: center;
 }
@@ -143,10 +176,20 @@
   padding: 24px;
 }
 
-.memory-grid {
+.memory-grid,
+.connections-grid,
+.profile-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 18px;
+}
+
+.memory-grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.connections-grid,
+.profile-layout {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
 .memory-card {
@@ -168,7 +211,9 @@
   object-fit: cover;
 }
 
-.memory-fallback {
+.memory-fallback,
+.profile-avatar-fallback,
+.person-avatar-fallback {
   display: grid;
   place-items: center;
   background: rgba(132, 96, 55, 0.1);
@@ -182,21 +227,95 @@
 }
 
 .memory-copy h3,
-.memory-copy p {
+.memory-copy p,
+.person-copy h3,
+.person-copy p,
+.profile-summary p {
   margin: 0;
 }
 
-.memory-meta {
+.memory-meta,
+.person-meta {
   font-size: 0.88rem;
   color: #7b644f;
 }
 
-.empty-state {
-  color: #5b4838;
-}
-
 .danger-button {
   color: #983b2f;
+}
+
+.profile-summary,
+.profile-card,
+.connections-card {
+  display: grid;
+  gap: 18px;
+}
+
+.profile-header {
+  align-items: center;
+}
+
+.profile-avatar,
+.profile-avatar-fallback {
+  width: 96px;
+  height: 96px;
+  border-radius: 28px;
+  flex: 0 0 auto;
+}
+
+.profile-avatar,
+.person-avatar {
+  object-fit: cover;
+}
+
+.connection-list,
+.search-results {
+  display: grid;
+  gap: 12px;
+}
+
+.person-card {
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(96, 71, 45, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.person-avatar,
+.person-avatar-fallback {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  flex: 0 0 auto;
+}
+
+.person-copy {
+  display: grid;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.person-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.connection-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(141, 79, 30, 0.12);
+  color: #8d4f1e;
+  font-weight: 700;
+}
+
+.empty-state,
+.empty-copy {
+  color: #5b4838;
 }
 
 @media (max-width: 760px) {
@@ -209,8 +328,8 @@
     justify-items: center;
   }
 
-  .topbar > button:first-of-type,
-  .topbar > button:last-of-type {
+  .nav-group,
+  .topbar > button:last-child {
     justify-self: center;
   }
 
@@ -218,7 +337,14 @@
     grid-template-columns: 1fr;
   }
 
-  .home-hero {
+  .home-hero,
+  .connections-hero,
+  .person-card,
+  .profile-header {
     align-items: flex-start;
+  }
+
+  .search-form {
+    grid-template-columns: 1fr;
   }
 }
