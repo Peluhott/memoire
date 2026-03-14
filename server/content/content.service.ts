@@ -60,6 +60,10 @@ export async function listContentByUser(userId: number) {
 	return content.map(withImageUrl);
 }
 
+export async function listContentSummariesByUser(userId: number) {
+	return await repo.getContentSummariesByUser(userId);
+}
+
 export async function toggleShare(contentId: number, userId: number) {
 	return await repo.toggleSharedWithNetwork(contentId, userId);
 }
@@ -93,4 +97,9 @@ export async function deleteContent(contentId: number, userId: number) {
 export async function getAccessibleSharedContentIds(userId: number) {
 	const acceptedConnectionUserIds = await listAcceptedConnectionUserIds(userId);
 	return await repo.getSharedContentIdsByUserIds(acceptedConnectionUserIds);
+}
+
+export async function listAccessibleSharedContent(userId: number) {
+	const acceptedConnectionUserIds = await listAcceptedConnectionUserIds(userId);
+	return await repo.getSharedContentSummariesByUserIds(acceptedConnectionUserIds);
 }
