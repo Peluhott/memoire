@@ -30,36 +30,12 @@ export async function getHistoryHandler(req: Request, res: Response) {
   }
 }
 
-export async function getDueUsersHandler(_req: Request, res: Response) {
+export async function processPendingDeliveriesHandler(_req: Request, res: Response) {
   try {
-    const users = await deliveryService.getUsersNeedingDelivery();
-    return res.status(200).json({ users });
+    const deliveries = await deliveryService.processPendingDeliveries();
+    return res.status(200).json({ deliveries });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
-  }
-}
-
-export async function sendTestEmailHandler(req: Request, res: Response) {
-  const userId = req.user?.id;
-  if (!userId) {
-    return res.status(401).json({ error: "authentication required" });
-  }
-
-  try {
-    const user = await userRepository.getUserById(Number(userId));
-    if (!user?.email) {
-      return res.status(404).json({ error: "user email not found" });
-    }
-
-    const result = await deliveryService.sendTestEmail(
-      user.email,
-      "This is a delivery service test from the Memoire backend. If you received this, the email route is working.",
-    );
-
-    return res.status(200).json({ message: "email sent", result });
-  } catch (err: any) {
-    const status = err?.status || 500;
-    return res.status(status).json({ error: err.message });
   }
 }
 

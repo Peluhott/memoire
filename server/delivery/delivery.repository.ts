@@ -67,3 +67,45 @@ export async function listPendingDeliveriesDue(asOf: Date) {
     },
   });
 }
+
+export async function listSentDeliveriesForUser(userId: number) {
+  return await prisma.delivery.findMany({
+    where: {
+      userId,
+      status: "SENT",
+    },
+    select: {
+      id: true,
+      contentId: true,
+      sharedContentId: true,
+      scheduledFor: true,
+    },
+    orderBy: {
+      scheduledFor: "asc",
+    },
+  });
+}
+
+export async function markDeliverySent(
+  deliveryId: number,
+  contentId: number,
+  sharedContentId?: number | null,
+) {
+  return await prisma.delivery.update({
+    where: { id: deliveryId },
+    data: {
+      status: "SENT",
+      contentId,
+      sharedContentId: sharedContentId ?? null,
+    },
+  });
+}
+
+export async function markDeliveryFailed(deliveryId: number) {
+  return await prisma.delivery.update({
+    where: { id: deliveryId },
+    data: {
+      status: "FAILED",
+    },
+  });
+}
