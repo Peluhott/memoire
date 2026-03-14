@@ -1,15 +1,13 @@
-jest.mock('../prisma/prisma', () => ({
-  delivery: {
-    findUnique: jest.fn(),
-    findMany: jest.fn(),
-    update: jest.fn(),
-    updateMany: jest.fn(),
-  },
-}))
+process.env.JWT_SECRET = 'test-secret'
 
 jest.mock('./delivery.repository', () => ({
-  createDelivery: jest.fn(),
-  getActiveDeliveryForReceiver: jest.fn(),
+  createScheduledDelivery: jest.fn(),
+  listDeliveriesForUser: jest.fn(),
+  listPendingDeliveriesDue: jest.fn(),
+}))
+
+jest.mock('../util/randomNextWeekday', () => ({
+  randomNextWeekday: jest.fn(),
 }))
 
 jest.mock('../util/chatcompletion', () => ({
@@ -24,7 +22,8 @@ jest.mock('resend', () => ({
   Resend: jest.fn(),
 }))
 
-const prisma = require('../prisma/prisma')
+const deliveryRepository = require('./delivery.repository')
+const { randomNextWeekday } = require('../util/randomNextWeekday')
 const { Resend } = require('resend')
 const { getChatCompletion } = require('../util/chatcompletion')
 const { getSignedImageUrl } = require('../util/getSignedImage')
@@ -33,20 +32,41 @@ const deliveryService = require('./delivery.service.ts')
 describe('delivery.service', () => {
   beforeEach(() => {
     process.env.RESEND_API_KEY = 'resend-test-key'
+    jest.clearAllMocks()
   })
 
-  test('openDelivery rejects users who are not the receiver', async () => {
-    prisma.delivery.findUnique.mockResolvedValue({
-      id: 4,
-      receiverId: 10,
-      status: 'DELIVERED',
-      dateSeen: null,
+  test('scheduleRandomDelivery creates a pending delivery using the generated date', async () => {
+    const scheduledFor = new Date('2026-03-16T09:00:00.000Z')
+    randomNextWeekday.mockReturnValue(scheduledFor)
+    deliveryRepository.createScheduledDelivery.mockResolvedValue({
+      id: 1,
+      userId: 7,
+      scheduledFor,
+      status: 'PENDING',
     })
 
-    await expect(deliveryService.openDelivery(4, 99)).rejects.toMatchObject({
-      message: 'only the receiver may open this delivery',
-      status: 403,
+    const result = await deliveryService.scheduleRandomDelivery(7)
+
+    expect(randomNextWeekday).toHaveBeenCalled()
+    expect(deliveryRepository.createScheduledDelivery).toHaveBeenCalledWith(7, scheduledFor)
+    expect(result).toEqual({
+      id: 1,
+      userId: 7,
+      scheduledFor,
+      status: 'PENDING',
     })
+  })
+
+  test('getUsersNeedingDelivery returns distinct user ids with pending due deliveries', async () => {
+    deliveryRepository.listPendingDeliveriesDue.mockResolvedValue([
+      { id: 1, userId: 4, status: 'PENDING' },
+      { id: 2, userId: 4, status: 'PENDING' },
+      { id: 3, userId: 9, status: 'PENDING' },
+    ])
+
+    const result = await deliveryService.getUsersNeedingDelivery(new Date('2026-03-20T12:00:00.000Z'))
+
+    expect(result).toEqual([4, 9])
   })
 
   test('sendTestEmail embeds the image url in the email html body', async () => {
