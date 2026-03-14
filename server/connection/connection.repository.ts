@@ -125,6 +125,24 @@ export async function listAcceptedConnectionsForUser(userId: number) {
   });
 }
 
+export async function listAcceptedConnectionUserIds(userId: number) {
+  const rows = await prisma.connection.findMany({
+    where: {
+      status: 'ACCEPTED',
+      OR: [
+        { userAId: userId },
+        { userBId: userId },
+      ],
+    },
+    select: {
+      userAId: true,
+      userBId: true,
+    },
+  });
+
+  return rows.map((row) => (row.userAId === userId ? row.userBId : row.userAId));
+}
+
 /**
  * List incoming pending connections that the user needs to accept.
  * These are PENDING connections where the user is a participant and they are NOT the requester.
