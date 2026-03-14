@@ -69,6 +69,7 @@ function App() {
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [sendingEmailId, setSendingEmailId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [togglingShareId, setTogglingShareId] = useState<number | null>(null)
   const [contentItems, setContentItems] = useState<ContentCard[]>([])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -378,6 +379,38 @@ function App() {
       setStatus(error instanceof Error ? error.message : 'Delete failed')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  async function toggleContentShare(item: ContentCard) {
+    if (!token) {
+      setStatus('Login required before updating sharing.')
+      return
+    }
+
+    setTogglingShareId(item.id)
+    setStatus(`${item.shared_with_network ? 'Removing' : 'Adding'} "${item.title}" from shared memories...`)
+
+    try {
+      const updated = await fetchJson<ContentItem>(`/content/${item.id}/toggle-share`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      setContentItems((current) =>
+        current.map((entry) =>
+          entry.id === item.id ? { ...entry, shared_with_network: updated.shared_with_network } : entry,
+        ),
+      )
+      setStatus(
+        updated.shared_with_network
+          ? `"${item.title}" is now shared with your network.`
+          : `"${item.title}" is no longer shared with your network.`,
+      )
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not update sharing')
+    } finally {
+      setTogglingShareId(null)
     }
   }
 
@@ -727,10 +760,31 @@ function App() {
                   <div className="memory-meta">
                     <span>{item.type}</span>
                     <span>{new Date(item.uploaded_at).toLocaleDateString()}</span>
+                    <span>{item.shared_with_network ? 'Shared with network' : 'Private'}</span>
                   </div>
                   <div className="memory-actions">
                     <button
-                      disabled={sendingEmailId === item.id || deletingId === item.id}
+                      className="ghost-button"
+                      disabled={
+                        togglingShareId === item.id ||
+                        sendingEmailId === item.id ||
+                        deletingId === item.id
+                      }
+                      type="button"
+                      onClick={() => void toggleContentShare(item)}
+                    >
+                      {togglingShareId === item.id
+                        ? 'Saving...'
+                        : item.shared_with_network
+                          ? 'Make Private'
+                          : 'Share with Network'}
+                    </button>
+                    <button
+                      disabled={
+                        sendingEmailId === item.id ||
+                        deletingId === item.id ||
+                        togglingShareId === item.id
+                      }
                       type="button"
                       onClick={() => void sendImageEmail(item)}
                     >
@@ -738,7 +792,11 @@ function App() {
                     </button>
                     <button
                       className="ghost-button danger-button"
-                      disabled={deletingId === item.id || sendingEmailId === item.id}
+                      disabled={
+                        deletingId === item.id ||
+                        sendingEmailId === item.id ||
+                        togglingShareId === item.id
+                      }
                       type="button"
                       onClick={() => void removeContent(item)}
                     >
