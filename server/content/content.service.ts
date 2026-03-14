@@ -3,6 +3,7 @@ import * as repo from './content.repository';
 import { uploadProductImage } from '../util/uploadImage';
 import { getSignedImageUrl } from '../util/getSignedImage';
 import { deleteProductImage } from '../util/deleteImage';
+import { listAcceptedConnectionUserIds } from '../connection/connection.repository';
 
 function withImageUrl<T extends { public_id: string; resource_type: string }>(content: T) {
 	return {
@@ -59,8 +60,8 @@ export async function listContentByUser(userId: number) {
 	return content.map(withImageUrl);
 }
 
-export async function toggleShare(contentId: number) {
-	return await repo.toggleSharedWithNetwork(contentId);
+export async function toggleShare(contentId: number, userId: number) {
+	return await repo.toggleSharedWithNetwork(contentId, userId);
 }
 
 export async function getUserContentCount(userId: number) {
@@ -87,4 +88,9 @@ export async function deleteContent(contentId: number, userId: number) {
 	await repo.deleteContentByIdForUser(contentId, userId);
 
 	return content;
+}
+
+export async function getAccessibleSharedContentIds(userId: number) {
+	const acceptedConnectionUserIds = await listAcceptedConnectionUserIds(userId);
+	return await repo.getSharedContentIdsByUserIds(acceptedConnectionUserIds);
 }

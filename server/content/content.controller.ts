@@ -66,10 +66,13 @@ export async function getContentSignedUrl(req: Request, res: Response, next: Nex
 
 export async function toggleShare(req: Request, res: Response, next: NextFunction) {
   try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'unauthenticated' });
+
     const id = Number(req.params.id ?? req.body.id);
     if (!id || Number.isNaN(id)) return res.status(400).json({ error: 'invalid_content_id' });
 
-  const updated = await service.toggleShare(id);
+  const updated = await service.toggleShare(id, Number(userId));
   if (!updated) return res.status(404).json({ error: 'not_found' });
   return res.status(200).json(updated);
   } catch (err) {

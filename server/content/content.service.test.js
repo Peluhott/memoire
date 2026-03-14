@@ -4,7 +4,12 @@ jest.mock('./content.repository', () => ({
   getContentByIdForUser: jest.fn(),
   getContentByUser: jest.fn(),
   getContentCountByUser: jest.fn(),
+  getSharedContentIdsByUserIds: jest.fn(),
   toggleSharedWithNetwork: jest.fn(),
+}))
+
+jest.mock('../connection/connection.repository', () => ({
+  listAcceptedConnectionUserIds: jest.fn(),
 }))
 
 jest.mock('../util/uploadImage', () => ({
@@ -20,6 +25,7 @@ jest.mock('../util/deleteImage', () => ({
 }))
 
 const repository = require('./content.repository')
+const connectionRepository = require('../connection/connection.repository')
 const { getSignedImageUrl } = require('../util/getSignedImage')
 const { deleteProductImage } = require('../util/deleteImage')
 const contentService = require('./content.service.ts')
@@ -65,5 +71,16 @@ describe('content.service', () => {
     expect(deleted).toEqual(
       expect.objectContaining({ id: 4, public_id: 'memories/photo-4', title: 'Beach day' }),
     )
+  })
+
+  test('getAccessibleSharedContentIds returns ids shared by accepted connections', async () => {
+    connectionRepository.listAcceptedConnectionUserIds.mockResolvedValue([3, 8])
+    repository.getSharedContentIdsByUserIds.mockResolvedValue([12, 19])
+
+    const result = await contentService.getAccessibleSharedContentIds(7)
+
+    expect(connectionRepository.listAcceptedConnectionUserIds).toHaveBeenCalledWith(7)
+    expect(repository.getSharedContentIdsByUserIds).toHaveBeenCalledWith([3, 8])
+    expect(result).toEqual([12, 19])
   })
 })
