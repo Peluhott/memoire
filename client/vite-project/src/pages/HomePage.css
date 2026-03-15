@@ -1,0 +1,150 @@
+.home-page,
+.connections-page {
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 1.5rem 0 3rem;
+}
+
+.page-kicker {
+  margin: 0 0 0.3rem;
+  color: rgba(94, 100, 114, 0.8);
+  font-size: 0.84rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.page-message {
+  margin: 0;
+  color: rgba(94, 100, 114, 0.92);
+}
+
+.home-hero,
+.upload-panel,
+.empty-panel {
+  border: 1px solid rgba(94, 100, 114, 0.1);
+  border-radius: 28px;
+  background: rgba(250, 243, 221, 0.72);
+  box-shadow: 0 22px 48px rgba(94, 100, 114, 0.1);
+}
+
+.home-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.8rem;
+}
+
+.home-hero h1,
+.upload-panel h2,
+.delivery-panel h2,
+.memories-section h2,
+.empty-panel h3 {
+  margin: 0;
+}
+
+.home-hero p {
+  margin: 0.5rem 0 0;
+  max-width: 60ch;
+}
+
+.home-hero__stats {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr);
+  gap: 1rem;
+}
+
+.home-hero__stats div {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 140px;
+  padding: 1rem;
+  border-radius: 24px;
+  background: rgba(184, 242, 230, 0.75);
+}
+
+.home-hero__stats strong {
+  font-size: 2rem;
+}
+
+.home-toolbar {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.upload-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(94, 100, 114, 0.34);
+  backdrop-filter: blur(6px);
+}
+
+.upload-panel {
+  display: grid;
+  gap: 1rem;
+  width: min(560px, 100%);
+  padding: 1.4rem;
+  background: rgba(250, 243, 221, 0.96);
+}
+
+.upload-panel label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.upload-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.upload-panel__close {
+  background: transparent;
+  box-shadow: none;
+}
+
+.upload-panel__toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.upload-panel__toggle input {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.empty-panel p {
+  margin: 0;
+  color: rgba(94, 100, 114, 0.9);
+}
+
+.memories-section {
+  margin-top: 1.8rem;
+}
+
+.memories-section__header {
+  margin-bottom: 1rem;
+}
+
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.empty-panel {
+  padding: 1.4rem;
+}
+
+@media (max-width: 900px) {
+  .home-hero {
+    flex-direction: column;
+  }
+}
