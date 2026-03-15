@@ -119,3 +119,12 @@
 
 - Added a root `docker-compose.yml` that runs both containers and injects the server runtime secrets from `server/.env`.
 - Verified the compose file with `docker compose config`.
+
+## 2026-03-15 00:56:44 EDT
+
+- Rebuilt the deleted client UI in `client/vite-project/src/` as a typed React app with dedicated pages for auth, home, and connections plus separate CSS files for each page and component.
+- Wired the new login flow to the existing backend auth contract: `POST /user/login` with `username` and `password`, storing the JWT in local storage and sending it on protected requests.
+- Reworked the home page around the current v1 product flow: owned-memory gallery, upload modal, share toggle, delete, and delivery scheduling while intentionally removing delivery history from the visible UI.
+- Implemented the requested connection browsing UI with accepted, incoming, outgoing, and search states backed by the existing connection and user search endpoints.
+- Tuned the connections layout so cards keep a consistent size whether the user has one friend or many.
+- Verified the frontend with `npm run build`.

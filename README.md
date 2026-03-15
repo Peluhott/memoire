@@ -52,5 +52,25 @@ Right now the main focus is v1:
 ## Current State
 
 - The backend already includes user, content, delivery, and related domain code
-- The frontend already includes Memoire-specific UI, not just a scaffold
+- The frontend has been rebuilt into a typed React client with:
+  - auth screen for `POST /user/login` and `POST /user/create`
+  - home screen for authenticated content listing, upload, delete, share toggle, and delivery scheduling
+  - connections screen for accepted, incoming, outgoing, and search-driven requests
 - The project is still being shaped around the v1 email delivery flow
+
+## Frontend Notes
+
+- Client entry point: `client/vite-project/src/App.tsx`
+- Auth is JWT-based and stored in `localStorage` under `memoire.auth.token`
+- The client talks to the server at `http://localhost:5000`
+- Main authenticated views:
+  1. `Home`
+  2. `Connections`
+- Current home UX:
+  - upload form opens from an `Upload memory` button instead of rendering inline by default
+  - memory cards support share toggle and delete
+  - delivery history is intentionally hidden from the UI
+- Current connections UX:
+  - top-level lists for accepted, incoming, and outgoing connections
+  - email search uses `GET /user/search?email=...`
+  - card sizing is constrained so a single connection does not stretch larger than a multi-card grid
