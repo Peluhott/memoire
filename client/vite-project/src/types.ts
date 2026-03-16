@@ -20,7 +20,7 @@ export type Memory = {
 export type DeliveryHistoryItem = {
   id: number
   scheduledFor: string
-  status: 'PENDING' | 'SENT' | 'FAILED'
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'INACTIVE'
   content?: {
     title: string
   } | null

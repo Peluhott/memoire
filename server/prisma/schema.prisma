@@ -87,6 +87,7 @@ enum DeliveryStatus {
   PENDING
   SENT
   FAILED
+  INACTIVE
 }
 
 model Delivery {

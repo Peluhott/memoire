@@ -64,6 +64,10 @@
   background: linear-gradient(135deg, #ff8f7a 0%, #f7c59f 100%);
 }
 
+.profile-card__action {
+  background: linear-gradient(135deg, #d9ed92 0%, #b5e48c 100%);
+}
+
 @media (max-width: 720px) {
   .profile-card__row,
   .profile-card__danger {

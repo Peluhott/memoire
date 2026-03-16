@@ -23,6 +23,19 @@ export async function createScheduledDelivery(userId: number, scheduledFor: Date
   });
 }
 
+export async function getCurrentPendingDeliveryForUser(userId: number) {
+  return await prisma.delivery.findFirst({
+    where: {
+      userId,
+      status: "PENDING",
+    },
+    orderBy: [
+      { scheduledFor: "asc" },
+      { id: "asc" },
+    ],
+  });
+}
+
 export async function listDeliveriesForUser(userId: number) {
   return await prisma.delivery.findMany({
     where: { userId },
@@ -106,6 +119,15 @@ export async function markDeliveryFailed(deliveryId: number) {
     where: { id: deliveryId },
     data: {
       status: "FAILED",
+    },
+  });
+}
+
+export async function markDeliveryInactive(deliveryId: number) {
+  return await prisma.delivery.update({
+    where: { id: deliveryId },
+    data: {
+      status: "INACTIVE",
     },
   });
 }

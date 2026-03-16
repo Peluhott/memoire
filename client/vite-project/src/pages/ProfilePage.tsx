@@ -5,17 +5,18 @@ type ProfilePageProps = {
   busy: boolean
   message: string
   user: SafeUser
+  onStopEmails: () => void
   onDeleteAccount: () => void
 }
 
-function ProfilePage({ busy, message, user, onDeleteAccount }: ProfilePageProps) {
+function ProfilePage({ busy, message, user, onStopEmails, onDeleteAccount }: ProfilePageProps) {
   return (
     <main className="profile-page">
       <section className="profile-hero">
         <div>
           <p className="page-kicker">User info</p>
           <h1>Manage your Memoire account</h1>
-          <p>Review the account tied to your memory archive and permanently delete it if needed.</p>
+          <p>Review your account, pause the next email delivery, or permanently delete the archive.</p>
         </div>
       </section>
 
@@ -31,6 +32,16 @@ function ProfilePage({ busy, message, user, onDeleteAccount }: ProfilePageProps)
         <div className="profile-card__row">
           <span>Email</span>
           <strong>{user.email}</strong>
+        </div>
+
+        <div className="profile-card__danger">
+          <div>
+            <h2>Stop next email</h2>
+            <p>Turn off your currently pending Memoire delivery without deleting your account.</p>
+          </div>
+          <button className="profile-card__action" disabled={busy} type="button" onClick={onStopEmails}>
+            {busy ? 'Updating...' : 'Stop next email'}
+          </button>
         </div>
 
         <div className="profile-card__danger">

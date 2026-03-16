@@ -23,7 +23,7 @@ type UploadContentResponse = {
   delivery: {
     id: number
     scheduledFor: string
-    status: 'PENDING' | 'SENT' | 'FAILED'
+    status: 'PENDING' | 'SENT' | 'FAILED' | 'INACTIVE'
   } | null
 }
 
@@ -241,6 +241,20 @@ function App() {
     }
   }
 
+  async function handleStopEmails() {
+    if (!token) return
+
+    setBusy(true)
+    try {
+      await apiRequest('/deliveries/deactivate-current', { method: 'POST' }, token)
+      setMessage('Your next scheduled email delivery has been turned off.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to stop email deliveries')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function refreshHomeData() {
     if (!token) return
     const content = await apiRequest<Memory[]>('/content', {}, token)
@@ -428,6 +442,7 @@ function App() {
       <ProfilePage
         busy={busy}
         message={message}
+        onStopEmails={handleStopEmails}
         onDeleteAccount={handleDeleteAccount}
         user={user}
       />
