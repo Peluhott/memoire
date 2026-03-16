@@ -4,6 +4,7 @@ import { uploadProductImage } from '../util/uploadImage';
 import { getSignedImageUrl } from '../util/getSignedImage';
 import { deleteProductImage } from '../util/deleteImage';
 import { listAcceptedConnectionUserIds } from '../connection/connection.repository';
+import deliveryService from '../delivery/delivery.service';
 
 function withImageUrl<T extends { public_id: string; resource_type: string }>(content: T) {
 	return {
@@ -11,6 +12,8 @@ function withImageUrl<T extends { public_id: string; resource_type: string }>(co
 		imageUrl: getSignedImageUrl(content.public_id, content.resource_type),
 	};
 }
+
+const MIN_CONTENT_FOR_DELIVERY = 5;
 
 // Create content after optionally checking a per-user limit (limit optional)
 export async function createContent(
@@ -39,6 +42,47 @@ export async function createContent(
 		description,
 		sharedWithNetwork
 	);
+}
+
+export async function createContentForUpload(
+	userId: number,
+	publicId: string,
+	resourceType: string,
+	type: string,
+	title: string,
+	description: string,
+	sharedWithNetwork?: boolean,
+	limit?: number
+) {
+	const countBeforeUpload = await repo.getContentCountByUser(userId);
+	if (typeof limit === 'number' && countBeforeUpload >= limit) {
+		throw new Error('content_limit_reached');
+	}
+
+	const content = await repo.createContent(
+		userId,
+		publicId,
+		resourceType,
+		type,
+		title,
+		description,
+		sharedWithNetwork
+	);
+
+	if (countBeforeUpload + 1 < MIN_CONTENT_FOR_DELIVERY) {
+		return {
+			content,
+			deliveryScheduled: false,
+			delivery: null,
+		};
+	}
+
+	const delivery = await deliveryService.scheduleRandomDelivery(userId);
+	return {
+		content,
+		deliveryScheduled: true,
+		delivery,
+	};
 }
 
 

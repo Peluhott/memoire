@@ -29,7 +29,7 @@ export async function uploadContent(req: Request, res: Response, next: NextFunct
     if (!contentType) return res.status(400).json({ error: 'type_required' });
     if (!title) return res.status(400).json({ error: 'title_required' });
 
-    const created = await service.createContent(
+    const created = await service.createContentForUpload(
       userId,
       publicId,
       resourceType ?? 'unknown',
