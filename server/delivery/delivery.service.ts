@@ -205,6 +205,21 @@ export async function getDeliveryHistory(userId: number) {
   return await deliveryRepo.listDeliveriesForUser(userId);
 }
 
+export async function deactivateCurrentPendingDelivery(userId: number) {
+  if (!Number.isInteger(userId)) {
+    throw new Error("userId must be an integer");
+  }
+
+  const delivery = await deliveryRepo.getCurrentPendingDeliveryForUser(userId);
+  if (!delivery) {
+    const error: any = new Error("no pending delivery found");
+    error.status = 404;
+    throw error;
+  }
+
+  return await deliveryRepo.markDeliveryInactive(delivery.id);
+}
+
 export async function generateAndSendMessageEmail(
   email: string,
   title: string,
@@ -323,6 +338,7 @@ export async function processPendingDeliveries(asOf = new Date()) {
 export default {
   scheduleRandomDelivery,
   getDeliveryHistory,
+  deactivateCurrentPendingDelivery,
   generateAndSendMessageEmail,
   processPendingDeliveries,
 };

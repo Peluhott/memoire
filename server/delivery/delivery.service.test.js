@@ -2,9 +2,11 @@ process.env.JWT_SECRET = 'test-secret'
 
 jest.mock('./delivery.repository', () => ({
   createScheduledDelivery: jest.fn(),
+  getCurrentPendingDeliveryForUser: jest.fn(),
   listDeliveriesForUser: jest.fn(),
   listPendingDeliveriesDue: jest.fn(),
   listSentDeliveriesForUser: jest.fn(),
+  markDeliveryInactive: jest.fn(),
   markDeliverySent: jest.fn(),
   markDeliveryFailed: jest.fn(),
 }))
@@ -64,6 +66,38 @@ describe('delivery.service', () => {
       scheduledFor,
       status: 'PENDING',
     })
+  })
+
+  test('deactivateCurrentPendingDelivery marks the earliest pending delivery inactive', async () => {
+    const delivery = {
+      id: 15,
+      userId: 7,
+      scheduledFor: new Date('2026-03-21T09:00:00.000Z'),
+      status: 'PENDING',
+    }
+    const inactiveDelivery = {
+      ...delivery,
+      status: 'INACTIVE',
+    }
+    deliveryRepository.getCurrentPendingDeliveryForUser.mockResolvedValue(delivery)
+    deliveryRepository.markDeliveryInactive.mockResolvedValue(inactiveDelivery)
+
+    const result = await deliveryService.deactivateCurrentPendingDelivery(7)
+
+    expect(deliveryRepository.getCurrentPendingDeliveryForUser).toHaveBeenCalledWith(7)
+    expect(deliveryRepository.markDeliveryInactive).toHaveBeenCalledWith(15)
+    expect(result).toEqual(inactiveDelivery)
+  })
+
+  test('deactivateCurrentPendingDelivery throws when the user has no pending delivery', async () => {
+    deliveryRepository.getCurrentPendingDeliveryForUser.mockResolvedValue(null)
+
+    await expect(deliveryService.deactivateCurrentPendingDelivery(7)).rejects.toMatchObject({
+      message: 'no pending delivery found',
+      status: 404,
+    })
+
+    expect(deliveryRepository.markDeliveryInactive).not.toHaveBeenCalled()
   })
 
   test('processPendingDeliveries uses unseen owned content first and marks delivery sent', async () => {

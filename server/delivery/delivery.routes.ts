@@ -12,6 +12,9 @@ router.post('/schedule', deliveryController.createScheduledDeliveryHandler);
 // GET /deliveries/history
 router.get('/history', deliveryController.getHistoryHandler);
 
+// POST /deliveries/deactivate-current
+router.post('/deactivate-current', deliveryController.deactivateCurrentPendingDeliveryHandler);
+
 // POST /deliveries/process-pending
 router.post('/process-pending', deliveryController.processPendingDeliveriesHandler);
 

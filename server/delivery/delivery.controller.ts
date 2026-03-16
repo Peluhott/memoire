@@ -30,6 +30,29 @@ export async function getHistoryHandler(req: Request, res: Response) {
   }
 }
 
+export async function deactivateCurrentPendingDeliveryHandler(
+  req: Request,
+  res: Response,
+) {
+  const userId = req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ error: "authentication required" });
+  }
+
+  try {
+    const delivery = await deliveryService.deactivateCurrentPendingDelivery(
+      Number(userId),
+    );
+    return res.status(200).json({
+      message: "pending delivery deactivated",
+      delivery,
+    });
+  } catch (err: any) {
+    const status = err?.status || 400;
+    return res.status(status).json({ error: err.message });
+  }
+}
+
 export async function processPendingDeliveriesHandler(_req: Request, res: Response) {
   try {
     const deliveries = await deliveryService.processPendingDeliveries();
