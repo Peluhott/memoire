@@ -1,69 +1,111 @@
-import prisma from '../prisma/prisma';
+import prisma from "../prisma/prisma";
 
-
-/**
- * Create a delivery record.
- * - lets DB defaults set dateSent, timesSeen and expiresAt
- * - returns the created Delivery record
- */
-export async function createDelivery(
-  contentId: number,
-  receiverId: number,
-  senderId: number,
-) {
-  // Basic validation
-  if (!Number.isInteger(contentId) || !Number.isInteger(receiverId) || !Number.isInteger(senderId)) {
-    throw new Error('ids must be integers');
+export async function createScheduledDelivery(userId: number, scheduledFor: Date) {
+  if (!Number.isInteger(userId)) {
+    throw new Error("userId must be an integer");
   }
 
-  // If a (non-expired) delivery already exists for this receiver, return it.
-  // Assumption: at most one active delivery exists per receiver; "active"
-  // means status is not EXPIRED and expiresAt is in the future.
-  const now = new Date();
-  const existing = await prisma.delivery.findFirst({
-    where: {
-      receiverId,
-      status: { not: 'EXPIRED' },
-      expiresAt: { gt: now },
-    },
-    orderBy: { dateSent: 'desc' },
-  });
-
-  if (existing) return existing;
-
-  // Always create deliveries in the DELIVERED state. State transitions
-  // (OPENED, EXPIRED, FAILED) should be performed by separate service
-  // operations after creation.
-  const record = await prisma.delivery.create({
+  return await prisma.delivery.create({
     data: {
-      contentId,
-      receiverId,
-      senderId,
-      status: 'DELIVERED',
+      userId,
+      scheduledFor,
+      status: "PENDING",
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+        },
+      },
     },
   });
-
-  return record;
 }
 
-
-
-/**
- * Return the single active delivery for a receiver, if any.
- * Active = status != EXPIRED and expiresAt > now()
- */
-export async function getActiveDeliveryForReceiver(receiverId: number) {
-  const now = new Date();
-  return await prisma.delivery.findFirst({
-    where: {
-      receiverId,
-      status: { not: 'EXPIRED' },
-      expiresAt: { gt: now },
-    },
-    orderBy: { dateSent: 'desc' },
+export async function listDeliveriesForUser(userId: number) {
+  return await prisma.delivery.findMany({
+    where: { userId },
+    orderBy: { scheduledFor: "desc" },
     include: {
-      sender: { select: { id: true, username: true, email: true } },
-      content: { select: { id: true, title: true, public_id: true } },
+      content: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+      sharedContent: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+    },
+  });
+}
+
+export async function listPendingDeliveriesDue(asOf: Date) {
+  return await prisma.delivery.findMany({
+    where: {
+      status: "PENDING",
+      scheduledFor: {
+        lte: asOf,
+      },
+    },
+    orderBy: [
+      { scheduledFor: "asc" },
+      { id: "asc" },
+    ],
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+        },
+      },
+    },
+  });
+}
+
+export async function listSentDeliveriesForUser(userId: number) {
+  return await prisma.delivery.findMany({
+    where: {
+      userId,
+      status: "SENT",
+    },
+    select: {
+      id: true,
+      contentId: true,
+      sharedContentId: true,
+      scheduledFor: true,
+    },
+    orderBy: {
+      scheduledFor: "asc",
+    },
+  });
+}
+
+export async function markDeliverySent(
+  deliveryId: number,
+  contentId: number,
+  sharedContentId?: number | null,
+) {
+  return await prisma.delivery.update({
+    where: { id: deliveryId },
+    data: {
+      status: "SENT",
+      contentId,
+      sharedContentId: sharedContentId ?? null,
+    },
+  });
+}
+
+export async function markDeliveryFailed(deliveryId: number) {
+  return await prisma.delivery.update({
+    where: { id: deliveryId },
+    data: {
+      status: "FAILED",
     },
   });
 }

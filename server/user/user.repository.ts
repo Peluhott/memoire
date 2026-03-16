@@ -7,6 +7,7 @@ export async function insertUser(username: string, password: string, email: stri
         const user = await tx.user.create({
             data: {
                 username,
+                name: username,
                 password,
                 email,
                 // initial limits
@@ -38,9 +39,82 @@ export async function getUserById(id: number) {
     })
 }
 
+export async function getSafeUserById(id: number) {
+    return await prisma.user.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            username: true,
+            name: true,
+            email: true,
+            profilePictureUrl: true,
+            limit_upload: true,
+            limit_connections: true,
+        },
+    })
+}
+
 export async function getUserByUsername(username:string) {
     return await prisma.user.findUnique({
         where:{username:username}
+    })
+}
+
+export async function getUserByEmail(email: string) {
+    return await prisma.user.findUnique({
+        where: { email },
+    })
+}
+
+export async function searchUsersByEmail(email: string, excludeUserId?: number) {
+    return await prisma.user.findMany({
+        where: {
+            email: {
+                contains: email,
+                mode: 'insensitive',
+            },
+            ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+        },
+        select: {
+            id: true,
+            username: true,
+            name: true,
+            email: true,
+            profilePictureUrl: true,
+        },
+        take: 10,
+        orderBy: {
+            id: 'asc',
+        },
+    })
+}
+
+export async function updateUserProfile(
+    id: number,
+    data: {
+        name?: string;
+        profilePictureUrl?: string | null;
+    }
+) {
+    return await prisma.user.update({
+        where: { id },
+        data,
+        select: {
+            id: true,
+            username: true,
+            name: true,
+            email: true,
+            profilePictureUrl: true,
+            limit_upload: true,
+            limit_connections: true,
+        },
+    })
+}
+
+export async function updateUserPassword(id: number, password: string) {
+    return await prisma.user.update({
+        where: { id },
+        data: { password },
     })
 }
 

@@ -18,3 +18,15 @@ export async function uploadProductImage(
     type: result.type,  //authenticated            
   };
 }
+
+export async function uploadProfileImage(file: Express.Multer.File) {
+  const result = await cloudinary.uploader.upload(file.path, {
+    folder: 'profile-pictures',
+    resource_type: 'image',
+  });
+
+  return {
+    public_id: result.public_id,
+    secure_url: result.secure_url,
+  };
+}

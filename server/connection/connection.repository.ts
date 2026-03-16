@@ -1,5 +1,13 @@
 import prisma from "../prisma/prisma";
-import { Prisma, Connection } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+
+const connectionUserSelect = {
+  id: true,
+  username: true,
+  name: true,
+  email: true,
+  profilePictureUrl: true,
+} satisfies Prisma.userSelect;
 
 /**
  * Create a connection between two users.
@@ -11,7 +19,7 @@ import { Prisma, Connection } from '@prisma/client';
  * @param userId2 second user id
  * @
  */
-export async function createConnection(userId1: number, userId2: number): Promise<Connection> {
+export async function createConnection(userId1: number, userId2: number) {
   if (userId1 === userId2) {
     throw new Error('cannot create connection to self');
   }
@@ -26,6 +34,10 @@ export async function createConnection(userId1: number, userId2: number): Promis
         userBId: b,
       },
     },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
   });
 
   if (existing) return existing;
@@ -38,6 +50,10 @@ export async function createConnection(userId1: number, userId2: number): Promis
         userBId: b,
         requester: userId1,
         // status will use the DB default (PENDING) if not provided
+      },
+      include: {
+        userA: { select: connectionUserSelect },
+        userB: { select: connectionUserSelect },
       },
     });
     return created;
@@ -52,6 +68,10 @@ export async function createConnection(userId1: number, userId2: number): Promis
             userBId: b,
           },
         },
+        include: {
+          userA: { select: connectionUserSelect },
+          userB: { select: connectionUserSelect },
+        },
       });
       if (found) return found;
     }
@@ -60,7 +80,13 @@ export async function createConnection(userId1: number, userId2: number): Promis
 }
 
 export async function getConnectionById(id: number) {
-  return await prisma.connection.findUnique({ where: { id } });
+  return await prisma.connection.findUnique({
+    where: { id },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
+  });
 }
 
 export async function listConnectionsForUser(userId: number) {
@@ -71,6 +97,11 @@ export async function listConnectionsForUser(userId: number) {
         { userBId: userId }
       ],
     },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
+    orderBy: { updatedAt: 'desc' },
   });
 }
 
@@ -86,7 +117,30 @@ export async function listAcceptedConnectionsForUser(userId: number) {
       ],
       status: 'ACCEPTED',
     },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
+    orderBy: { updatedAt: 'desc' },
   });
+}
+
+export async function listAcceptedConnectionUserIds(userId: number) {
+  const rows = await prisma.connection.findMany({
+    where: {
+      status: 'ACCEPTED',
+      OR: [
+        { userAId: userId },
+        { userBId: userId },
+      ],
+    },
+    select: {
+      userAId: true,
+      userBId: true,
+    },
+  });
+
+  return rows.map((row) => (row.userAId === userId ? row.userBId : row.userAId));
 }
 
 /**
@@ -105,7 +159,87 @@ export async function listIncomingPendingConnections(userId: number) {
         requester: userId,
       },
     },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
+    orderBy: { updatedAt: 'desc' },
   });
+}
+
+export async function listOutgoingPendingConnections(userId: number) {
+  return await prisma.connection.findMany({
+    where: {
+      status: 'PENDING',
+      requester: userId,
+      OR: [
+        { userAId: userId },
+        { userBId: userId },
+      ],
+    },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
+}
+
+export async function acceptIncomingConnection(connectionId: number, userId: number) {
+  const connection = await getConnectionById(connectionId)
+  if (!connection) {
+    throw new Error('connection not found')
+  }
+
+  const isParticipant = connection.userAId === userId || connection.userBId === userId
+  if (!isParticipant) {
+    throw new Error('not allowed to update this connection')
+  }
+
+  if (connection.requester === userId) {
+    throw new Error('requester cannot accept their own request')
+  }
+
+  if (connection.status !== 'PENDING') {
+    throw new Error('only pending requests can be accepted')
+  }
+
+  return await prisma.connection.update({
+    where: { id: connectionId },
+    data: { status: 'ACCEPTED' },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
+  })
+}
+
+export async function rejectIncomingConnection(connectionId: number, userId: number) {
+  const connection = await getConnectionById(connectionId)
+  if (!connection) {
+    throw new Error('connection not found')
+  }
+
+  const isParticipant = connection.userAId === userId || connection.userBId === userId
+  if (!isParticipant) {
+    throw new Error('not allowed to update this connection')
+  }
+
+  if (connection.requester === userId) {
+    throw new Error('requester cannot reject their own request')
+  }
+
+  if (connection.status !== 'PENDING') {
+    throw new Error('only pending requests can be rejected')
+  }
+
+  return await prisma.connection.delete({
+    where: { id: connectionId },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
+  })
 }
 
 /**
@@ -138,6 +272,10 @@ export async function blockUser(blockerId: number, blockedId: number) {
       requester: blockerId,
       status: 'BLOCKED',
     },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
   });
 
   return result;
@@ -152,6 +290,11 @@ export async function listBlockedByUser(userId: number) {
       requester: userId,
       status: 'BLOCKED',
     },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
+    orderBy: { updatedAt: 'desc' },
   });
 }
 
@@ -168,5 +311,10 @@ export async function listUsersWhoBlockedUser(userId: number) {
         { userBId: userId },
       ],
     },
+    include: {
+      userA: { select: connectionUserSelect },
+      userB: { select: connectionUserSelect },
+    },
+    orderBy: { updatedAt: 'desc' },
   });
 }

@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "nodemon --watch . --ext ts --exec ts-node server.ts",
     "start": "ts-node server.ts",
+    "test": "jest --runInBand",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -15,6 +16,7 @@
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "express-validator": "^7.2.1",
+    "jest": "^30.3.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "openai": "^6.27.0",

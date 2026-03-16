@@ -1,10 +1,9 @@
 import * as repo from './connection.repository';
-import { Connection } from '@prisma/client';
 
 /**
  * Create a connection request (or return existing)
  */
-export async function createConnection(userId1: number, userId2: number): Promise<Connection> {
+export async function createConnection(userId1: number, userId2: number) {
   if (!Number.isInteger(userId1) || !Number.isInteger(userId2)) {
     throw new Error('user ids must be integers');
   }
@@ -29,6 +28,27 @@ export async function listAcceptedConnections(userId: number) {
 export async function listIncomingPendingConnections(userId: number) {
   if (!Number.isInteger(userId)) throw new Error('userId must be an integer');
   return await repo.listIncomingPendingConnections(userId);
+}
+
+export async function listOutgoingPendingConnections(userId: number) {
+  if (!Number.isInteger(userId)) throw new Error('userId must be an integer');
+  return await repo.listOutgoingPendingConnections(userId);
+}
+
+export async function acceptIncomingConnection(connectionId: number, userId: number) {
+  if (!Number.isInteger(connectionId) || !Number.isInteger(userId)) {
+    throw new Error('ids must be integers');
+  }
+
+  return await repo.acceptIncomingConnection(connectionId, userId);
+}
+
+export async function rejectIncomingConnection(connectionId: number, userId: number) {
+  if (!Number.isInteger(connectionId) || !Number.isInteger(userId)) {
+    throw new Error('ids must be integers');
+  }
+
+  return await repo.rejectIncomingConnection(connectionId, userId);
 }
 
 export async function blockUser(blockerId: number, blockedId: number) {

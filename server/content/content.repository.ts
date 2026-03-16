@@ -30,6 +30,21 @@ export async function getContentByUser(userId: number) {
 	});
 }
 
+export async function getContentSummariesByUser(userId: number) {
+	return await prisma.content.findMany({
+		where: { user_id: userId },
+		select: {
+			id: true,
+			title: true,
+			description: true,
+			public_id: true,
+			resource_type: true,
+			uploaded_at: true,
+		},
+		orderBy: { uploaded_at: 'desc' },
+	});
+}
+
 export async function getContentById(contentId: number) {
   return await prisma.content.findUnique({ where: { id: contentId } });
 }
@@ -43,8 +58,13 @@ export async function getContentByIdForUser(contentId: number, userId: number) {
 	});
 }
 
-export async function toggleSharedWithNetwork(contentId: number) {
-	const item = await prisma.content.findUnique({ where: { id: contentId } });
+export async function toggleSharedWithNetwork(contentId: number, userId: number) {
+    const item = await prisma.content.findFirst({
+        where: {
+            id: contentId,
+            user_id: userId,
+        },
+    });
 	if (!item) return null;
 	return await prisma.content.update({
 		where: { id: contentId },
@@ -62,5 +82,59 @@ export async function deleteContentByIdForUser(contentId: number, userId: number
 			id: contentId,
 			user_id: userId,
 		},
+	});
+}
+
+export async function getSharedContentIdsByUserIds(userIds: number[]) {
+	if (userIds.length === 0) {
+		return [];
+	}
+
+	const content = await prisma.content.findMany({
+		where: {
+			user_id: {
+				in: userIds,
+			},
+			shared_with_network: true,
+		},
+		select: {
+			id: true,
+		},
+		orderBy: {
+			id: "asc",
+		},
+	});
+
+	return content.map((item) => item.id);
+}
+
+export async function getSharedContentSummariesByUserIds(userIds: number[]) {
+	if (userIds.length === 0) {
+		return [];
+	}
+
+	return await prisma.content.findMany({
+		where: {
+			user_id: {
+				in: userIds,
+			},
+			shared_with_network: true,
+		},
+		select: {
+			id: true,
+			title: true,
+			description: true,
+			public_id: true,
+			resource_type: true,
+			uploaded_at: true,
+			user: {
+				select: {
+					id: true,
+					username: true,
+					name: true,
+				},
+			},
+		},
+		orderBy: { uploaded_at: "desc" },
 	});
 }

@@ -1,138 +1,156 @@
-import prisma from "../prisma/prisma";
 import { Resend } from "resend";
 import * as deliveryRepo from "./delivery.repository";
+import * as contentService from "../content/content.service";
 import { getChatCompletion } from "../util/chatcompletion";
 import { getSignedImageUrl } from "../util/getSignedImage";
+import { randomNextWeekday } from "../util/randomNextWeekday";
 
-/**
- * Send a delivery: create it if there's no active delivery for the receiver.
- * Returns the delivery record (includes sender and content relations when available).
- */
-export async function sendDelivery(
-  contentId: number,
-  receiverId: number,
-  senderId: number,
+type MemoryContent = {
+  id: number;
+  title: string;
+  description: string;
+  public_id: string;
+  resource_type: string;
+  uploaded_at: Date;
+};
+
+type SharedMemoryContent = MemoryContent & {
+  user?: {
+    id: number;
+    username: string;
+    name: string | null;
+  };
+};
+
+function choosePrimaryContent(
+  ownedContent: MemoryContent[],
+  sentDeliveries: Array<{ contentId: number | null }>,
 ) {
-  // Basic validation mirroring the repository's checks
-  if (
-    !Number.isInteger(contentId) ||
-    !Number.isInteger(receiverId) ||
-    !Number.isInteger(senderId)
-  ) {
-    throw new Error("ids must be integers");
+  if (ownedContent.length === 0) {
+    const error: any = new Error("user has no content to deliver");
+    error.status = 400;
+    throw error;
   }
 
-  const record = await deliveryRepo.createDelivery(
-    contentId,
-    receiverId,
-    senderId,
+  const sentContentIds = new Set(
+    sentDeliveries
+      .map((delivery) => delivery.contentId)
+      .filter((contentId): contentId is number => Number.isInteger(contentId)),
   );
 
-  // Return a fresh read including relationships for API consumers
-  return prisma.delivery.findUnique({
-    where: { id: record.id },
-    include: {
-      sender: { select: { id: true, username: true, email: true } },
-      content: { select: { id: true, title: true, public_id: true } },
-    },
-  });
-}
-
-export async function getActiveDeliveryForReceiver(receiverId: number) {
-  if (!Number.isInteger(receiverId))
-    throw new Error("receiverId must be integer");
-  return deliveryRepo.getActiveDeliveryForReceiver(receiverId);
-}
-
-/**
- * Mark a delivery as opened by the receiver. Only the receiver may open.
- * Increments timesSeen and sets dateSeen on the first open.
- */
-export async function openDelivery(deliveryId: number, userId: number) {
-  if (!Number.isInteger(deliveryId) || !Number.isInteger(userId)) {
-    throw new Error("ids must be integers");
+  const unseen = ownedContent.filter((item) => !sentContentIds.has(item.id));
+  if (unseen.length > 0) {
+    return unseen[0];
   }
 
-  const delivery = await prisma.delivery.findUnique({
-    where: { id: deliveryId },
-  });
-  if (!delivery) {
-    const e: any = new Error("delivery not found");
-    e.status = 404;
-    throw e;
+  const sendCounts = new Map<number, number>();
+  for (const delivery of sentDeliveries) {
+    if (typeof delivery.contentId === "number") {
+      sendCounts.set(
+        delivery.contentId,
+        (sendCounts.get(delivery.contentId) ?? 0) + 1,
+      );
+    }
   }
 
-  if (delivery.receiverId !== userId) {
-    const e: any = new Error("only the receiver may open this delivery");
-    e.status = 403;
-    throw e;
-  }
-
-  if (delivery.status === "EXPIRED") {
-    const e: any = new Error("delivery has expired");
-    e.status = 410;
-    throw e;
-  }
-
-  const now = new Date();
-  const updated = await prisma.delivery.update({
-    where: { id: deliveryId },
-    data: {
-      timesSeen: { increment: 1 },
-      status: "OPENED",
-      dateSeen: delivery.dateSeen ?? now,
-    },
-    include: {
-      sender: { select: { id: true, username: true, email: true } },
-      content: { select: { id: true, title: true, public_id: true } },
-    },
-  });
-
-  return updated;
+  return ownedContent.reduce((leastSeen, current) => {
+    const currentCount = sendCounts.get(current.id) ?? 0;
+    const leastCount = sendCounts.get(leastSeen.id) ?? 0;
+    if (currentCount < leastCount) {
+      return current;
+    }
+    return leastSeen;
+  }, ownedContent[0]);
 }
 
-/**
- * Expire deliveries that have passed their expiresAt timestamp.
- * Returns the number of deliveries marked as expired.
- */
-export async function expireDueDeliveries() {
-  const now = new Date();
-  const result = await prisma.delivery.updateMany({
-    where: { expiresAt: { lt: now }, status: { not: "EXPIRED" } },
-    data: { status: "EXPIRED" },
-  });
-
-  return result.count;
-}
-
-/**
- * Return paginated history for a receiver.
- */
-export async function getDeliveryHistory(
-  receiverId: number,
-  take = 20,
-  skip = 0,
+function chooseSharedContent(
+  sharedContent: SharedMemoryContent[],
+  sentDeliveries: Array<{ sharedContentId: number | null }>,
 ) {
-  if (!Number.isInteger(receiverId))
-    throw new Error("receiverId must be integer");
+  if (sharedContent.length === 0) {
+    return null;
+  }
 
-  return prisma.delivery.findMany({
-    where: { receiverId },
-    orderBy: { dateSent: "desc" },
-    take,
-    skip,
-    include: {
-      sender: { select: { id: true, username: true, email: true } },
-      content: { select: { id: true, title: true, public_id: true } },
-    },
-  });
+  const sentSharedIds = new Set(
+    sentDeliveries
+      .map((delivery) => delivery.sharedContentId)
+      .filter((contentId): contentId is number => Number.isInteger(contentId)),
+  );
+
+  const unseen = sharedContent.filter((item) => !sentSharedIds.has(item.id));
+  if (unseen.length > 0) {
+    return unseen[0];
+  }
+
+  return sharedContent[Math.floor(Math.random() * sharedContent.length)];
 }
 
-export async function sendTestEmail(
-  email: string,
+function buildPromptForMemory(
+  primaryContent: MemoryContent,
+  sharedContent?: SharedMemoryContent | null,
+) {
+  if (!sharedContent) {
+    return `Primary memory title: ${primaryContent.title}\nPrimary memory description: ${primaryContent.description || "No description provided."}\nWrite one short warm note that brings this memory back naturally.`;
+  }
+
+  const sharedBy =
+    sharedContent.user?.name ??
+    sharedContent.user?.username ??
+    "someone in their network";
+  return `Primary memory title: ${primaryContent.title}\nPrimary memory description: ${primaryContent.description || "No description provided."}\nShared memory title: ${sharedContent.title}\nShared memory description: ${sharedContent.description || "No description provided."}\nShared by: ${sharedBy}\nWrite a short warm email note that first brings back the user's own memory and then briefly introduces the shared memory from their network.`;
+}
+
+function buildDeliveryEmailHtml(
   message: string,
-  attachmentPath?: string,
+  primaryContent: MemoryContent,
+  sharedContent?: SharedMemoryContent | null,
 ) {
+  const primaryImageUrl = getSignedImageUrl(
+    primaryContent.public_id,
+    primaryContent.resource_type,
+  );
+
+  if (!sharedContent) {
+    return `
+      <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+        <h1>Memoire</h1>
+        <p>${message}</p>
+        <section style="margin-top: 24px;">
+          <h2 style="margin-bottom: 8px;">${primaryContent.title}</h2>
+          <p>${primaryContent.description || "No description provided."}</p>
+          <img src="${primaryImageUrl}" alt="${primaryContent.title}" style="display:block; max-width:100%; margin-top:16px; border-radius:16px;" />
+        </section>
+      </div>
+    `;
+  }
+
+  const sharedImageUrl = getSignedImageUrl(
+    sharedContent.public_id,
+    sharedContent.resource_type,
+  );
+  const sharedBy =
+    sharedContent.user?.name ?? sharedContent.user?.username ?? "Your network";
+
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+      <h1>Memoire</h1>
+      <p>${message}</p>
+      <section style="margin-top: 24px;">
+        <h2 style="margin-bottom: 8px;">Your memory: ${primaryContent.title}</h2>
+        <p>${primaryContent.description || "No description provided."}</p>
+        <img src="${primaryImageUrl}" alt="${primaryContent.title}" style="display:block; max-width:100%; margin-top:16px; border-radius:16px;" />
+      </section>
+      <section style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e5e5;">
+        <h2 style="margin-bottom: 8px;">From your shared network: ${sharedContent.title}</h2>
+        <p>Shared by ${sharedBy}.</p>
+        <p>${sharedContent.description || "No description provided."}</p>
+        <img src="${sharedImageUrl}" alt="${sharedContent.title}" style="display:block; max-width:100%; margin-top:16px; border-radius:16px;" />
+      </section>
+    </div>
+  `;
+}
+
+async function sendHtmlEmail(email: string, subject: string, html: string) {
   const trimmedEmail = email.trim();
   if (!trimmedEmail) {
     const error: any = new Error("email is required");
@@ -140,14 +158,11 @@ export async function sendTestEmail(
     throw error;
   }
 
-  const trimmedMessage = message.trim();
-  if (!trimmedMessage) {
-    const error: any = new Error("message is required");
+  if (!html.trim()) {
+    const error: any = new Error("html is required");
     error.status = 400;
     throw error;
   }
-
-  const trimmedAttachmentPath = attachmentPath?.trim();
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -157,51 +172,45 @@ export async function sendTestEmail(
   }
 
   const resend = new Resend(apiKey);
-  console.log("[delivery.sendTestEmail] sending email", {
-    to: trimmedEmail,
-    subject: "testing to see if it works",
-    hasAttachment: Boolean(trimmedAttachmentPath),
-  });
   const { data, error } = await resend.emails.send({
     from: "onboarding@resend.dev",
     to: [trimmedEmail],
-    subject: "testing to see if it works",
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-        <h1>Memoire test email</h1>
-        <p>${trimmedMessage}</p>
-      </div>
-    `,
-    attachments: trimmedAttachmentPath
-      ? [
-          {
-            path: trimmedAttachmentPath,
-            filename: "memory.jpg",
-          },
-        ]
-      : undefined,
+    subject,
+    html,
   });
 
   if (error) {
-    console.error("[delivery.sendTestEmail] resend error", {
-      to: trimmedEmail,
-      error,
-    });
     const sendError: any = new Error(error.message);
     sendError.status = 502;
     throw sendError;
   }
 
-  console.log("[delivery.sendTestEmail] email sent", {
-    to: trimmedEmail,
-    id: data?.id,
-  });
   return data;
 }
 
-export async function generateMessageFromImage(
+export async function scheduleRandomDelivery(userId: number) {
+  if (!Number.isInteger(userId)) {
+    throw new Error("userId must be an integer");
+  }
+
+  const scheduledFor = randomNextWeekday();
+  return await deliveryRepo.createScheduledDelivery(userId, scheduledFor);
+}
+
+export async function getDeliveryHistory(userId: number) {
+  if (!Number.isInteger(userId)) {
+    throw new Error("userId must be an integer");
+  }
+
+  return await deliveryRepo.listDeliveriesForUser(userId);
+}
+
+export async function generateAndSendMessageEmail(
+  email: string,
   title: string,
   description: string,
+  publicId?: string,
+  resourceType?: string,
 ) {
   const trimmedTitle = title.trim();
   const trimmedDescription = description.trim();
@@ -213,60 +222,107 @@ export async function generateMessageFromImage(
   }
 
   const prompt = `Title: ${trimmedTitle}\nDescription: ${trimmedDescription || "No description provided."}`;
-  console.log("[delivery.generateMessageFromImage] generating message", {
-    title: trimmedTitle,
-    hasDescription: Boolean(trimmedDescription),
-  });
-  const message = await getChatCompletion(prompt);
+  const message = (await getChatCompletion(prompt)).trim();
 
-  if (!message.trim()) {
+  if (!message) {
     const error: any = new Error("generated message was empty");
     error.status = 502;
     throw error;
   }
 
-  console.log("[delivery.generateMessageFromImage] message generated", {
-    title: trimmedTitle,
-    preview: message.slice(0, 80),
-  });
-  return message.trim();
-}
+  const imageUrl =
+    publicId && resourceType
+      ? getSignedImageUrl(publicId, resourceType)
+      : undefined;
+  const trimmedImageUrl = imageUrl?.trim();
+  const result = await sendHtmlEmail(
+    email,
+    "testing to see if it works",
+    `
+      <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+        <h1>Memoire test email</h1>
+        <p>${message}</p>
+        ${
+          trimmedImageUrl
+            ? `<img src="${trimmedImageUrl}" alt="Memory photo" style="display:block; max-width:100%; margin-top:16px; border-radius:16px;" />`
+            : ""
+        }
+      </div>
+    `,
+  );
 
-export async function generateAndSendMessageEmail(
-  email: string,
-  title: string,
-  description: string,
-  publicId?: string,
-  resourceType?: string,
-) {
-  console.log("[delivery.generateAndSendMessageEmail] start", {
-    to: email,
-    title,
-  });
-  const message = await generateMessageFromImage(title, description);
-  const attachmentPath =
-    publicId && resourceType ? getSignedImageUrl(publicId, resourceType) : undefined;
-  const result = await sendTestEmail(email, message, attachmentPath);
-
-  console.log("[delivery.generateAndSendMessageEmail] complete", {
-    to: email,
-    title,
-    id: result?.id,
-    hasAttachment: Boolean(attachmentPath),
-  });
   return {
     message,
     result,
   };
 }
 
+export async function processPendingDeliveries(asOf = new Date()) {
+  const dueDeliveries = await deliveryRepo.listPendingDeliveriesDue(asOf);
+  const results = [];
+
+  for (const delivery of dueDeliveries) {
+    try {
+      const ownedContent = await contentService.listContentSummariesByUser(
+        delivery.userId,
+      );
+      const sentDeliveries = await deliveryRepo.listSentDeliveriesForUser(
+        delivery.userId,
+      );
+      const primaryContent = choosePrimaryContent(ownedContent, sentDeliveries);
+      const sharedContent = chooseSharedContent(
+        await contentService.listAccessibleSharedContent(delivery.userId),
+        sentDeliveries,
+      );
+      const prompt = buildPromptForMemory(primaryContent, sharedContent);
+      const message = (await getChatCompletion(prompt)).trim();
+
+      if (!message) {
+        throw new Error("generated message was empty");
+      }
+
+      const html = buildDeliveryEmailHtml(
+        message,
+        primaryContent,
+        sharedContent,
+      );
+      const emailResult = await sendHtmlEmail(
+        delivery.user.email,
+        "A memory from Memoire",
+        html,
+      );
+
+      await deliveryRepo.markDeliverySent(
+        delivery.id,
+        primaryContent.id,
+        sharedContent?.id ?? null,
+      );
+
+      results.push({
+        deliveryId: delivery.id,
+        userId: delivery.userId,
+        status: "SENT",
+        contentId: primaryContent.id,
+        sharedContentId: sharedContent?.id ?? null,
+        emailId: emailResult?.id ?? null,
+      });
+    } catch (error: any) {
+      await deliveryRepo.markDeliveryFailed(delivery.id);
+      results.push({
+        deliveryId: delivery.id,
+        userId: delivery.userId,
+        status: "FAILED",
+        error: error.message,
+      });
+    }
+  }
+
+  return results;
+}
+
 export default {
-  sendDelivery,
-  getActiveDeliveryForReceiver,
-  openDelivery,
-  expireDueDeliveries,
+  scheduleRandomDelivery,
   getDeliveryHistory,
-  sendTestEmail,
-  generateMessageFromImage,
   generateAndSendMessageEmail,
+  processPendingDeliveries,
 };

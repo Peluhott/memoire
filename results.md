@@ -86,4 +86,45 @@
 - Updated generated delivery emails to accept the selected Cloudinary image identity and attach the signed asset URL when the email is sent.
 - Kept Resend's `from` address unchanged and verified the backend with `npm run typecheck`.
 
+## 2026-03-12 09:43:37 EDT
 
+- Added an authenticated `DELETE /content/:id` route with controller, service, and repository support so users can remove their own uploaded memories.
+- Added Cloudinary asset deletion before removing the database row and verified the backend with `npm run typecheck`.
+
+## 2026-03-12 09:54:52 EDT
+
+- Replaced the frontend test-style flow with a simpler Memoire UI centered on a top nav, auth actions, uploads list, and an inline upload panel.
+- Added per-memory `Generate Email` and `Delete` actions on the main uploads page and verified the frontend with `npm run build`.
+
+## 2026-03-12 10:04:06 EDT
+
+- Changed generated memory emails to embed the selected photo directly in the HTML body instead of sending it as a file attachment.
+- Split the client into a dedicated auth page and a separate logged-in homepage while keeping the existing `Generate Email` and `Delete` actions on uploads.
+- Verified the backend with `npm run typecheck` and the frontend with `npm run build`.
+
+## 2026-03-12 10:36:23 EDT
+
+- Added a lightweight Jest setup for the server using a local TypeScript transformer instead of adding `ts-jest`.
+- Added focused service-level unit tests for `user`, `content`, `delivery`, and a minimal validation test for `connection`.
+- Verified the server with `npm test` and `npm run typecheck`.
+
+## 2026-03-12 11:02:53 EDT
+
+- Added Dockerfiles for the server and client plus tracked `.dockerignore` files for each image build context.
+- Added an Nginx config for the client image and changed server CORS to the hard-coded client origin `http://localhost:8080`.
+- Verified the server with `npm run typecheck` and the client with `npm run build`.
+- Docker image builds could not be completed in this session because the local Docker daemon was not reachable.
+
+## 2026-03-12 11:18:26 EDT
+
+- Added a root `docker-compose.yml` that runs both containers and injects the server runtime secrets from `server/.env`.
+- Verified the compose file with `docker compose config`.
+
+## 2026-03-15 00:56:44 EDT
+
+- Rebuilt the deleted client UI in `client/vite-project/src/` as a typed React app with dedicated pages for auth, home, and connections plus separate CSS files for each page and component.
+- Wired the new login flow to the existing backend auth contract: `POST /user/login` with `username` and `password`, storing the JWT in local storage and sending it on protected requests.
+- Reworked the home page around the current v1 product flow: owned-memory gallery, upload modal, share toggle, delete, and delivery scheduling while intentionally removing delivery history from the visible UI.
+- Implemented the requested connection browsing UI with accepted, incoming, outgoing, and search states backed by the existing connection and user search endpoints.
+- Tuned the connections layout so cards keep a consistent size whether the user has one friend or many.
+- Verified the frontend with `npm run build`.

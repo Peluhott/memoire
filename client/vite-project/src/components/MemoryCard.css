@@ -1,0 +1,84 @@
+.memory-card {
+  overflow: hidden;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(94, 100, 114, 0.98), rgba(49, 53, 60, 0.98));
+  color: white;
+  box-shadow: 0 24px 50px rgba(94, 100, 114, 0.24);
+}
+
+.memory-card__media {
+  position: relative;
+  min-height: 360px;
+}
+
+.memory-card__image,
+.memory-card__fallback {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  object-fit: cover;
+}
+
+.memory-card__fallback {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--peach), var(--mint));
+  color: var(--ink);
+  font-size: 4rem;
+}
+
+.memory-card__overlay {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.4rem;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.82));
+}
+
+.memory-card__overlay h3,
+.memory-card__overlay p {
+  margin: 0;
+}
+
+.memory-card__badge {
+  width: fit-content;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(250, 243, 221, 0.2);
+  border: 1px solid rgba(250, 243, 221, 0.28);
+  font-size: 0.76rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.memory-card__footer {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem 1.2rem 1.3rem;
+}
+
+.memory-card__meta,
+.memory-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.memory-card__meta {
+  color: rgba(250, 243, 221, 0.72);
+  font-size: 0.88rem;
+}
+
+.memory-card__actions button {
+  flex: 1 1 160px;
+}
+
+.memory-card__delete {
+  background: rgba(255, 166, 158, 0.18);
+  color: #fff0ed;
+  border-color: rgba(255, 166, 158, 0.3);
+}

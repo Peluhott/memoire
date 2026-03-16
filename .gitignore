@@ -7,6 +7,8 @@ node_modules
 /generated/prisma
 .vscode
 .dockerignore
+!server/.dockerignore
+!client/vite-project/.dockerignore
 .DS_Store
 *.tsbuildinfo
 agent.md

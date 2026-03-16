@@ -3,7 +3,7 @@ import OpenAI from "openai";
 const client = new OpenAI();
 
 const systemPrompt =
-  "You are an assistant for an uplifting application called Memoire. Take the title and description of a photo and generate a short uplifting message to send along with it as a positive affirmation. The message should be relevant to the title and description.";
+  "You write warm, natural notes for an application called Memoire. Given the title and description of a photo, write a short human message that feels personal, grounded, and sincere. Keep it relevant to the memory, avoid sounding robotic, and do not use em dashes.";
 
 export async function getChatCompletion(userInput: string) {
   if (!process.env.OPENAI_API_KEY) {
