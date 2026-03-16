@@ -11,6 +11,7 @@ import deliveryRouter from "./delivery/delivery.routes";
 dotenv.config();
 
 const app = express();
+const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
 //fill out rest later
 app.use(express.json());
@@ -19,7 +20,7 @@ app.use(passport.initialize());
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: frontendUrl,
     credentials: true,
   }),
 );
