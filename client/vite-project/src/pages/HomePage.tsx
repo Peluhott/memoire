@@ -22,7 +22,6 @@ type HomePageProps = {
   onUploadSubmit: (event: FormEvent<HTMLFormElement>) => void
   onToggleShare: (memory: Memory) => void
   onDelete: (memory: Memory) => void
-  onScheduleDelivery: () => void
 }
 
 function HomePage({
@@ -37,7 +36,6 @@ function HomePage({
   onUploadSubmit,
   onToggleShare,
   onDelete,
-  onScheduleDelivery,
 }: HomePageProps) {
   return (
     <main className="home-page">
@@ -61,9 +59,6 @@ function HomePage({
       <section className="home-toolbar">
         <button disabled={busy} type="button" onClick={() => onUploadOpenChange(true)}>
           Upload memory
-        </button>
-        <button disabled={busy} type="button" onClick={onScheduleDelivery}>
-          Schedule random email
         </button>
       </section>
 
@@ -121,6 +116,9 @@ function HomePage({
               />
               <span>Make this memory shareable with network</span>
             </label>
+            <p className="upload-panel__note">
+              Upload at least 5 memories and Memoire will start scheduling email deliveries for you.
+            </p>
             <button disabled={busy} type="submit">
               {busy ? 'Saving...' : 'Save memory'}
             </button>
