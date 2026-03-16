@@ -241,6 +241,94 @@ function App() {
     }
   }
 
+  async function handleUpdateProfileName(name: string) {
+    if (!token) return false
+
+    setBusy(true)
+    try {
+      const updatedUser = await apiRequest<SafeUser>(
+        '/user/profile',
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ name }),
+        },
+        token,
+      )
+      setUser(updatedUser)
+      setMessage('Profile updated.')
+      return true
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to update profile')
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleUploadProfilePicture(file: File | null) {
+    if (!token || !file) {
+      setMessage('Select a profile image first.')
+      return false
+    }
+
+    const body = new FormData()
+    body.set('file', file)
+
+    setBusy(true)
+    try {
+      const updatedUser = await apiRequest<SafeUser>(
+        '/user/profile-picture',
+        {
+          method: 'PATCH',
+          body,
+        },
+        token,
+      )
+      setUser(updatedUser)
+      setMessage('Profile picture updated.')
+      return true
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to update profile picture')
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleUpdatePassword(currentPassword: string, newPassword: string) {
+    if (!token) return false
+
+    setBusy(true)
+    try {
+      const response = await apiRequest<{ message: string }>(
+        '/user/password',
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ currentPassword, newPassword }),
+        },
+        token,
+      )
+      localStorage.removeItem(TOKEN_STORAGE_KEY)
+      setToken('')
+      setUser(null)
+      setMemories([])
+      setAcceptedConnections([])
+      setIncomingConnections([])
+      setOutgoingConnections([])
+      setSearchResults([])
+      setSearchQuery('')
+      setUploadOpen(false)
+      setActiveView('home')
+      setMessage(response.message)
+      return true
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to update password')
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function handleStopEmails() {
     if (!token) return
 
@@ -442,6 +530,9 @@ function App() {
       <ProfilePage
         busy={busy}
         message={message}
+        onUpdatePassword={handleUpdatePassword}
+        onUpdateProfileName={handleUpdateProfileName}
+        onUploadProfilePicture={handleUploadProfilePicture}
         onStopEmails={handleStopEmails}
         onDeleteAccount={handleDeleteAccount}
         user={user}
