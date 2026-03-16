@@ -6,7 +6,7 @@ import ConnectionsPage from './pages/ConnectionsPage'
 import type { ConnectionRecord, Memory, SafeUser } from './types'
 import './App.css'
 
-const API_BASE_URL = 'http://localhost:5000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://memoireserver.mangosky-85e31bca.eastus2.azurecontainerapps.io'
 const TOKEN_STORAGE_KEY = 'memoire.auth.token'
 
 type UploadFormState = {
