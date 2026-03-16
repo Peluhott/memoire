@@ -56,6 +56,20 @@ export async function getCurrentUser(req: Request, res: Response) {
     }
 }
 
+export async function deleteCurrentUser(req: Request, res: Response) {
+    if (!req.user?.id) {
+        return res.status(401).json({ message: 'authentication required' })
+    }
+
+    try {
+        await userService.deleteCurrentUserService(req.user.id)
+        return res.status(200).json({ message: 'account deleted' })
+    } catch (error: any) {
+        const status = error.message === 'user not found' ? 404 : 500
+        return res.status(status).json({ message: error.message })
+    }
+}
+
 export async function updateProfile(req: Request, res: Response) {
     if (!req.user?.id) {
         return res.status(401).json({ message: 'authentication required' })

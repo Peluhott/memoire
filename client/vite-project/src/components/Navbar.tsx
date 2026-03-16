@@ -1,8 +1,8 @@
 import './Navbar.css'
 
 type NavbarProps = {
-  activeView: 'home' | 'connections'
-  onNavigate: (view: 'home' | 'connections') => void
+  activeView: 'home' | 'connections' | 'profile'
+  onNavigate: (view: 'home' | 'connections' | 'profile') => void
   onLogout: () => void
 }
 
@@ -28,6 +28,13 @@ function Navbar({ activeView, onNavigate, onLogout }: NavbarProps) {
           onClick={() => onNavigate('connections')}
         >
           Connections
+        </button>
+        <button
+          className={activeView === 'profile' ? 'memoire-nav__link is-active' : 'memoire-nav__link'}
+          type="button"
+          onClick={() => onNavigate('profile')}
+        >
+          Profile
         </button>
         <button className="memoire-nav__link" type="button" onClick={onLogout}>
           Logout

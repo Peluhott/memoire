@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt'
 import * as userQueries from './user.repository'
 import jwt from 'jsonwebtoken'
 import { uploadProfileImage } from '../util/uploadImage'
+import { deleteProductImage } from '../util/deleteImage'
 
 
 export async function createUserService(email: string, username: string, password: string) {
@@ -15,6 +16,20 @@ export async function getCurrentUserService(userId: number) {
         throw new Error('user not found')
     }
     return user
+}
+
+export async function deleteCurrentUserService(userId: number) {
+    const user = await userQueries.getUserById(userId)
+    if (!user) {
+        throw new Error('user not found')
+    }
+
+    const contentAssets = await userQueries.listUserContentAssets(userId)
+    for (const asset of contentAssets) {
+        await deleteProductImage(asset.public_id, asset.resource_type)
+    }
+
+    await userQueries.deleteUserAccount(userId)
 }
 
 export async function loginUserService(username: string, password: string) {

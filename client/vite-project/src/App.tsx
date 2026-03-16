@@ -3,6 +3,7 @@ import Navbar from './components/Navbar'
 import HomePage from './pages/HomePage'
 import LoginCreatePage from './pages/LoginCreatePage'
 import ConnectionsPage from './pages/ConnectionsPage'
+import ProfilePage from './pages/ProfilePage'
 import type { ConnectionRecord, Memory, SafeUser } from './types'
 import './App.css'
 
@@ -46,7 +47,7 @@ async function apiRequest<T>(path: string, init: RequestInit = {}, token?: strin
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY) || '')
-  const [activeView, setActiveView] = useState<'home' | 'connections'>('home')
+  const [activeView, setActiveView] = useState<'home' | 'connections' | 'profile'>('home')
   const [user, setUser] = useState<SafeUser | null>(null)
   const [memories, setMemories] = useState<Memory[]>([])
   const [acceptedConnections, setAcceptedConnections] = useState<ConnectionRecord[]>([])
@@ -196,6 +197,38 @@ function App() {
     setActiveView('home')
     setSearchResults([])
     setMessage('Logged out.')
+  }
+
+  async function handleDeleteAccount() {
+    if (!token || !user) return
+
+    const confirmed = window.confirm(
+      `Delete the Memoire account for ${user.email}? This cannot be undone.`,
+    )
+    if (!confirmed) {
+      return
+    }
+
+    setBusy(true)
+    try {
+      await apiRequest('/user/me', { method: 'DELETE' }, token)
+      localStorage.removeItem(TOKEN_STORAGE_KEY)
+      setToken('')
+      setUser(null)
+      setMemories([])
+      setAcceptedConnections([])
+      setIncomingConnections([])
+      setOutgoingConnections([])
+      setSearchResults([])
+      setSearchQuery('')
+      setUploadOpen(false)
+      setActiveView('home')
+      setMessage('Account deleted.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to delete account')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function refreshHomeData() {
@@ -360,41 +393,51 @@ function App() {
     )
   }
 
+  const activePage =
+    activeView === 'home' ? (
+      <HomePage
+        busy={busy}
+        memories={memories}
+        message={message}
+        onDelete={handleDelete}
+        onScheduleDelivery={handleScheduleDelivery}
+        onToggleShare={handleToggleShare}
+        onUploadOpenChange={setUploadOpen}
+        onUploadChange={handleUploadValueChange}
+        onUploadSubmit={handleUploadSubmit}
+        uploadOpen={uploadOpen}
+        uploadValues={uploadValues}
+        user={user}
+      />
+    ) : activeView === 'connections' ? (
+      <ConnectionsPage
+        accepted={acceptedConnections}
+        busy={busy}
+        currentUserId={user.id}
+        incoming={incomingConnections}
+        message={message}
+        onAccept={handleAcceptConnection}
+        onConnect={handleConnect}
+        onReject={handleRejectConnection}
+        onSearch={handleSearchConnections}
+        onSearchQueryChange={setSearchQuery}
+        outgoing={outgoingConnections}
+        searchQuery={searchQuery}
+        searchResults={searchResults}
+      />
+    ) : (
+      <ProfilePage
+        busy={busy}
+        message={message}
+        onDeleteAccount={handleDeleteAccount}
+        user={user}
+      />
+    )
+
   return (
     <div className="app-shell">
       <Navbar activeView={activeView} onLogout={handleLogout} onNavigate={setActiveView} />
-      {activeView === 'home' ? (
-        <HomePage
-          busy={busy}
-          memories={memories}
-          message={message}
-          onDelete={handleDelete}
-          onScheduleDelivery={handleScheduleDelivery}
-          onToggleShare={handleToggleShare}
-          onUploadOpenChange={setUploadOpen}
-          onUploadChange={handleUploadValueChange}
-          onUploadSubmit={handleUploadSubmit}
-          uploadOpen={uploadOpen}
-          uploadValues={uploadValues}
-          user={user}
-        />
-      ) : (
-        <ConnectionsPage
-          accepted={acceptedConnections}
-          busy={busy}
-          currentUserId={user.id}
-          incoming={incomingConnections}
-          message={message}
-          onAccept={handleAcceptConnection}
-          onConnect={handleConnect}
-          onReject={handleRejectConnection}
-          onSearch={handleSearchConnections}
-          onSearchQueryChange={setSearchQuery}
-          outgoing={outgoingConnections}
-          searchQuery={searchQuery}
-          searchResults={searchResults}
-        />
-      )}
+      {activePage}
     </div>
   )
 }

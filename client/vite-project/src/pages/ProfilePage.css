@@ -1,0 +1,73 @@
+.profile-page {
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 1.5rem 0 3rem;
+}
+
+.profile-hero,
+.profile-card {
+  border: 1px solid rgba(94, 100, 114, 0.1);
+  border-radius: 28px;
+  background: rgba(250, 243, 221, 0.72);
+  box-shadow: 0 22px 48px rgba(94, 100, 114, 0.1);
+}
+
+.profile-hero {
+  padding: 1.8rem;
+}
+
+.profile-hero h1,
+.profile-card h2 {
+  margin: 0;
+}
+
+.profile-hero p {
+  margin: 0.5rem 0 0;
+  max-width: 60ch;
+}
+
+.profile-card {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+}
+
+.profile-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(94, 100, 114, 0.12);
+}
+
+.profile-card__row span {
+  color: rgba(94, 100, 114, 0.8);
+}
+
+.profile-card__danger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 24px;
+  background: rgba(255, 166, 158, 0.16);
+}
+
+.profile-card__danger p {
+  margin: 0.45rem 0 0;
+}
+
+.profile-card__delete {
+  background: linear-gradient(135deg, #ff8f7a 0%, #f7c59f 100%);
+}
+
+@media (max-width: 720px) {
+  .profile-card__row,
+  .profile-card__danger {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

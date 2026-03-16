@@ -1,10 +1,12 @@
 process.env.JWT_SECRET = 'test-secret'
 
 jest.mock('./user.repository', () => ({
+  deleteUserAccount: jest.fn(),
   getUserById: jest.fn(),
   getUserByUsername: jest.fn(),
   incrementUserTokenVersion: jest.fn(),
   insertUser: jest.fn(),
+  listUserContentAssets: jest.fn(),
   updateUserProfile: jest.fn(),
   updateUserPassword: jest.fn(),
 }))
@@ -22,10 +24,15 @@ jest.mock('../util/uploadImage', () => ({
   uploadProfileImage: jest.fn(),
 }))
 
+jest.mock('../util/deleteImage', () => ({
+  deleteProductImage: jest.fn(),
+}))
+
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const userRepository = require('./user.repository')
 const { uploadProfileImage } = require('../util/uploadImage')
+const { deleteProductImage } = require('../util/deleteImage')
 const userService = require('./user.service.ts')
 
 describe('user.service', () => {
@@ -84,6 +91,21 @@ describe('user.service', () => {
     await userService.logoutUserService(5)
 
     expect(userRepository.incrementUserTokenVersion).toHaveBeenCalledWith(5)
+  })
+
+  test('deleteCurrentUserService deletes uploaded memory assets before removing the account', async () => {
+    userRepository.getUserById.mockResolvedValue({ id: 5 })
+    userRepository.listUserContentAssets.mockResolvedValue([
+      { public_id: 'memories/one', resource_type: 'image' },
+      { public_id: 'memories/two', resource_type: 'image' },
+    ])
+    userRepository.deleteUserAccount.mockResolvedValue({ id: 5 })
+
+    await userService.deleteCurrentUserService(5)
+
+    expect(deleteProductImage).toHaveBeenNthCalledWith(1, 'memories/one', 'image')
+    expect(deleteProductImage).toHaveBeenNthCalledWith(2, 'memories/two', 'image')
+    expect(userRepository.deleteUserAccount).toHaveBeenCalledWith(5)
   })
 
   test('uploadProfilePictureService uploads the file and stores the returned URL', async () => {
