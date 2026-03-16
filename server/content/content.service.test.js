@@ -12,6 +12,13 @@ jest.mock('../connection/connection.repository', () => ({
   listAcceptedConnectionUserIds: jest.fn(),
 }))
 
+jest.mock('../delivery/delivery.service', () => ({
+  __esModule: true,
+  default: {
+    scheduleRandomDelivery: jest.fn(),
+  },
+}))
+
 jest.mock('../util/uploadImage', () => ({
   uploadProductImage: jest.fn(),
 }))
@@ -26,6 +33,7 @@ jest.mock('../util/deleteImage', () => ({
 
 const repository = require('./content.repository')
 const connectionRepository = require('../connection/connection.repository')
+const deliveryService = require('../delivery/delivery.service').default
 const { getSignedImageUrl } = require('../util/getSignedImage')
 const { deleteProductImage } = require('../util/deleteImage')
 const contentService = require('./content.service.ts')
@@ -39,6 +47,62 @@ describe('content.service', () => {
     ).rejects.toThrow('content_limit_reached')
 
     expect(repository.createContent).not.toHaveBeenCalled()
+  })
+
+  test('createContentForUpload schedules a delivery once the user reaches five memories', async () => {
+    repository.getContentCountByUser.mockResolvedValue(4)
+    repository.createContent.mockResolvedValue({ id: 9, title: 'Title' })
+    deliveryService.scheduleRandomDelivery.mockResolvedValue({ id: 12, status: 'PENDING' })
+
+    const result = await contentService.createContentForUpload(
+      7,
+      'public-id',
+      'image',
+      'authenticated',
+      'Title',
+      'Body',
+      false,
+      10,
+    )
+
+    expect(repository.createContent).toHaveBeenCalledWith(
+      7,
+      'public-id',
+      'image',
+      'authenticated',
+      'Title',
+      'Body',
+      false,
+    )
+    expect(deliveryService.scheduleRandomDelivery).toHaveBeenCalledWith(7)
+    expect(result).toEqual({
+      content: { id: 9, title: 'Title' },
+      deliveryScheduled: true,
+      delivery: { id: 12, status: 'PENDING' },
+    })
+  })
+
+  test('createContentForUpload does not schedule a delivery before five memories', async () => {
+    repository.getContentCountByUser.mockResolvedValue(3)
+    repository.createContent.mockResolvedValue({ id: 8, title: 'Title' })
+
+    const result = await contentService.createContentForUpload(
+      7,
+      'public-id',
+      'image',
+      'authenticated',
+      'Title',
+      'Body',
+      false,
+      10,
+    )
+
+    expect(deliveryService.scheduleRandomDelivery).not.toHaveBeenCalled()
+    expect(result).toEqual({
+      content: { id: 8, title: 'Title' },
+      deliveryScheduled: false,
+      delivery: null,
+    })
   })
 
   test('getSignedUrlForContent returns a signed image url for owned content', async () => {

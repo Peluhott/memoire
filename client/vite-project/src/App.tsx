@@ -17,6 +17,16 @@ type UploadFormState = {
   file: File | null
 }
 
+type UploadContentResponse = {
+  content: Memory
+  deliveryScheduled: boolean
+  delivery: {
+    id: number
+    scheduledFor: string
+    status: 'PENDING' | 'SENT' | 'FAILED'
+  } | null
+}
+
 async function apiRequest<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
   const headers = new Headers(init.headers)
   if (!(init.body instanceof FormData)) {
@@ -259,7 +269,7 @@ function App() {
 
     setBusy(true)
     try {
-      await apiRequest('/content', { method: 'POST', body }, token)
+      const result = await apiRequest<UploadContentResponse>('/content', { method: 'POST', body }, token)
       setUploadValues({
         title: '',
         description: '',
@@ -268,7 +278,11 @@ function App() {
       })
       setUploadOpen(false)
       await refreshHomeData()
-      setMessage('Memory uploaded.')
+      setMessage(
+        result.deliveryScheduled
+          ? 'Memory uploaded. A delivery was scheduled.'
+          : 'Memory uploaded. Add at least 5 memories to start receiving deliveries.',
+      )
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to upload memory')
     } finally {
@@ -299,20 +313,6 @@ function App() {
       setMessage(`Removed "${memory.title}".`)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to remove memory')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function handleScheduleDelivery() {
-    if (!token) return
-    setBusy(true)
-    try {
-      await apiRequest('/deliveries/schedule', { method: 'POST' }, token)
-      await refreshHomeData()
-      setMessage('Random delivery scheduled.')
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to schedule delivery')
     } finally {
       setBusy(false)
     }
@@ -400,7 +400,6 @@ function App() {
         memories={memories}
         message={message}
         onDelete={handleDelete}
-        onScheduleDelivery={handleScheduleDelivery}
         onToggleShare={handleToggleShare}
         onUploadOpenChange={setUploadOpen}
         onUploadChange={handleUploadValueChange}

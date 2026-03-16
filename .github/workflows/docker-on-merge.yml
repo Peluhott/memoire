@@ -32,6 +32,6 @@ jobs:
       - name: Build and push client image
         uses: docker/build-push-action@v6
         with:
-          context: ./client/cite-project
+          context: ./client/vite-project
           push: true
           tags: peluhott/memoire:client-latest
