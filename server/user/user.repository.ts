@@ -54,6 +54,19 @@ export async function getSafeUserById(id: number) {
     })
 }
 
+export async function listUserContentAssets(userId: number) {
+    return await prisma.content.findMany({
+        where: { user_id: userId },
+        select: {
+            public_id: true,
+            resource_type: true,
+        },
+        orderBy: {
+            id: 'asc',
+        },
+    })
+}
+
 export async function getUserByUsername(username:string) {
     return await prisma.user.findUnique({
         where:{username:username}
@@ -126,5 +139,34 @@ export async function incrementUserTokenVersion(id: number) {
                 increment: 1,
             },
         },
+    })
+}
+
+export async function deleteUserAccount(id: number) {
+    return await prisma.$transaction(async (tx) => {
+        await tx.delivery.deleteMany({
+            where: { userId: id },
+        })
+
+        await tx.connection.deleteMany({
+            where: {
+                OR: [
+                    { userAId: id },
+                    { userBId: id },
+                ],
+            },
+        })
+
+        await tx.healthData.deleteMany({
+            where: { userId: id },
+        })
+
+        await tx.content.deleteMany({
+            where: { user_id: id },
+        })
+
+        return await tx.user.delete({
+            where: { id },
+        })
     })
 }
