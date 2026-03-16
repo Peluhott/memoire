@@ -1,0 +1,29 @@
+name: Process Pending Deliveries
+
+on:
+  schedule:
+    - cron: '0 13 * * *' # 9:00 AM Eastern during daylight saving time
+  workflow_dispatch:
+
+jobs:
+  process-pending:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call process-pending route
+        env:
+          PROCESS_PENDING_URL: ${{ secrets.PROCESS_PENDING_URL }}
+        run: |
+          echo "Calling scheduled delivery route..."
+
+          response=$(curl -s -o response.txt -w "%{http_code}" \
+            -X POST \
+            "$PROCESS_PENDING_URL")
+
+          echo "HTTP status: $response"
+          cat response.txt
+
+          if [ "$response" -lt 200 ] || [ "$response" -ge 300 ]; then
+            echo "Request failed"
+            exit 1
+          fi
