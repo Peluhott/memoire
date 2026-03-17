@@ -90,14 +90,14 @@ function buildPromptForMemory(
   sharedContent?: SharedMemoryContent | null,
 ) {
   if (!sharedContent) {
-    return `Primary memory title: ${primaryContent.title}\nPrimary memory description: ${primaryContent.description || "No description provided."}\nWrite one short warm note that brings this memory back naturally.`;
+    return `Primary memory title: ${primaryContent.title}\nPrimary memory description: ${primaryContent.description || "No description provided."}\nWrite one short cohesive email note that stands on its own. Refer to the memory naturally, but do not repeat the title or description verbatim and do not add labels, headings, or a second recap section.`;
   }
 
   const sharedBy =
     sharedContent.user?.name ??
     sharedContent.user?.username ??
     "someone in their network";
-  return `Primary memory title: ${primaryContent.title}\nPrimary memory description: ${primaryContent.description || "No description provided."}\nShared memory title: ${sharedContent.title}\nShared memory description: ${sharedContent.description || "No description provided."}\nShared by: ${sharedBy}\nWrite a short warm email note that first brings back the user's own memory and then briefly introduces the shared memory from their network.`;
+  return `Primary memory title: ${primaryContent.title}\nPrimary memory description: ${primaryContent.description || "No description provided."}\nShared memory title: ${sharedContent.title}\nShared memory description: ${sharedContent.description || "No description provided."}\nShared by: ${sharedBy}\nWrite a short warm email note that first brings back the user's own memory and then briefly introduces the shared memory from their network. Keep it cohesive and avoid repeating the raw titles or descriptions verbatim.`;
 }
 
 function buildDeliveryEmailHtml(
@@ -115,11 +115,7 @@ function buildDeliveryEmailHtml(
       <div style="font-family: Arial, sans-serif; line-height: 1.5;">
         <h1>Memoire</h1>
         <p>${message}</p>
-        <section style="margin-top: 24px;">
-          <h2 style="margin-bottom: 8px;">${primaryContent.title}</h2>
-          <p>${primaryContent.description || "No description provided."}</p>
-          <img src="${primaryImageUrl}" alt="${primaryContent.title}" style="display:block; max-width:100%; margin-top:16px; border-radius:16px;" />
-        </section>
+        <img src="${primaryImageUrl}" alt="${primaryContent.title}" style="display:block; max-width:100%; margin-top:24px; border-radius:16px;" />
       </div>
     `;
   }
