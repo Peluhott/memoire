@@ -13,16 +13,17 @@ jobs:
       - name: Call process-pending route
         env:
           PROCESS_PENDING_URL: ${{ secrets.PROCESS_PENDING_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           echo "Calling scheduled delivery route..."
-
           response=$(curl -s -o response.txt -w "%{http_code}" \
             -X POST \
+            -H "x-cron-secret: $CRON_SECRET" \
             "$PROCESS_PENDING_URL")
-
+          
           echo "HTTP status: $response"
           cat response.txt
-
+          
           if [ "$response" -lt 200 ] || [ "$response" -ge 300 ]; then
             echo "Request failed"
             exit 1
