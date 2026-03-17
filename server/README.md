@@ -23,6 +23,23 @@ The backend should stay focused on that loop. Social features, friend connection
 - JWT authentication
 - Resend for email delivery
 
+## Environment
+
+The server expects these environment variables:
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `CRON_SECRET`
+- `FRONTEND_URL`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `CLOUDINARY_URL_SIGNING_KEY`
+- `RESEND_API_KEY`
+- `OPENAI_API_KEY`
+
+`POST /deliveries/process-pending` is intended for scheduled automation and uses the `x-cron-secret` request header instead of JWT auth. Set `CRON_SECRET` in the deployed server environment and send the same value from your scheduler.
+
 ## Main Domains
 
 - `user`: account creation and login
