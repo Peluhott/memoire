@@ -1,24 +1,39 @@
-import express from 'express';
-import * as deliveryController from './delivery.controller';
-import { authenticateJWT } from '../auth/auth.middleware';
+import express from "express";
+import * as deliveryController from "./delivery.controller";
+import { authenticateJWT } from "../auth/auth.middleware";
+import { authenticateCronSecret } from "../auth/cron.middleware";
 
 const router = express.Router();
 
-router.use(authenticateJWT);
-
 // POST /deliveries/schedule
-router.post('/schedule', deliveryController.createScheduledDeliveryHandler);
+router.post(
+  "/schedule",
+  authenticateJWT,
+  deliveryController.createScheduledDeliveryHandler,
+);
 
 // GET /deliveries/history
-router.get('/history', deliveryController.getHistoryHandler);
+router.get("/history", authenticateJWT, deliveryController.getHistoryHandler);
 
 // POST /deliveries/deactivate-current
-router.post('/deactivate-current', deliveryController.deactivateCurrentPendingDeliveryHandler);
+router.post(
+  "/deactivate-current",
+  authenticateJWT,
+  deliveryController.deactivateCurrentPendingDeliveryHandler,
+);
 
 // POST /deliveries/process-pending
-router.post('/process-pending', deliveryController.processPendingDeliveriesHandler);
+router.post(
+  "/process-pending",
+  authenticateCronSecret,
+  deliveryController.processPendingDeliveriesHandler,
+);
 
 // POST /deliveries/generated-email
-router.post('/generated-email', deliveryController.sendGeneratedMessageEmailHandler);
+router.post(
+  "/generated-email",
+  authenticateJWT,
+  deliveryController.sendGeneratedMessageEmailHandler,
+);
 
 export default router;
