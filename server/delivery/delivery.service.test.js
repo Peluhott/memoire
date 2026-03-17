@@ -150,7 +150,12 @@ describe('delivery.service', () => {
     expect(sendMock).toHaveBeenCalledWith(
       expect.objectContaining({
         to: ['april@example.com'],
-        html: expect.stringContaining('Second memory'),
+        html: expect.stringContaining('A warm memory note.'),
+      }),
+    )
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        html: expect.not.stringContaining('<h2 style="margin-bottom: 8px;">Second memory</h2>'),
       }),
     )
     expect(result).toEqual([
@@ -227,6 +232,45 @@ describe('delivery.service', () => {
         sharedContentId: 301,
       }),
     )
+  })
+
+  test('processPendingDeliveries sends a single cohesive section when no shared content is included', async () => {
+    const sendMock = jest.fn().mockResolvedValue({ data: { id: 'email-4' }, error: null })
+    Resend.mockImplementation(() => ({
+      emails: {
+        send: sendMock,
+      },
+    }))
+    deliveryRepository.listPendingDeliveriesDue.mockResolvedValue([
+      {
+        id: 14,
+        userId: 10,
+        user: { id: 10, username: 'april', email: 'april@example.com' },
+      },
+    ])
+    deliveryRepository.listSentDeliveriesForUser.mockResolvedValue([])
+    contentService.listContentSummariesByUser.mockResolvedValue([
+      {
+        id: 501,
+        title: 'Valorant masters',
+        description: 'The time i went to go see a esports tournament for the first time in toronto. It was great to see amazing talent and to visit a new city',
+        public_id: 'memories/valorant-masters',
+        resource_type: 'image',
+        uploaded_at: new Date('2026-03-05T09:00:00.000Z'),
+      },
+    ])
+    contentService.listAccessibleSharedContent.mockResolvedValue([])
+    getChatCompletion.mockResolvedValue('I can still hear the crowd from Valorant Masters in Toronto.')
+    getSignedImageUrl.mockReturnValue('https://cloudinary.example/valorant.jpg')
+
+    await deliveryService.processPendingDeliveries()
+
+    const html = sendMock.mock.calls[0][0].html
+    expect(html).toContain('I can still hear the crowd from Valorant Masters in Toronto.')
+    expect(html).toContain('<img src="https://cloudinary.example/valorant.jpg"')
+    expect(html).not.toContain('The time i went to go see a esports tournament')
+    expect(html).not.toContain('<h2 style="margin-bottom: 8px;">Valorant masters</h2>')
+    expect(html).not.toContain('From your shared network:')
   })
 
   test('processPendingDeliveries marks delivery failed when sending throws', async () => {
